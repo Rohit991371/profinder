@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureSchema, prisma } from "@/lib/prisma";
 import { discoveryTokens, professorQueryWhere } from "@/lib/discovery";
 
+export const dynamic = "force-dynamic";
+
 function normalize(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
