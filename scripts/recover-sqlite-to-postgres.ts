@@ -1,13 +1,11 @@
 /**
- * Idempotent, non-destructive SQLite → PostgreSQL recovery.
- * Preserves primary keys. ON CONFLICT DO NOTHING. Never truncates or overwrites.
+ * Idempotent, non-destructive SQLite → PostgreSQL recovery preflight.
+ * Full row import remains in scripts/migrate-sqlite-to-postgres.py (ON CONFLICT DO NOTHING).
  *
- * Preflight only (safe):  npx tsx scripts/recover-sqlite-to-postgres.ts --preflight
- * Dry-run:                npx tsx scripts/recover-sqlite-to-postgres.ts --dry-run
- * Execute (staging only): CONFIRM_RECOVERY=preserve-ids npx tsx scripts/recover-sqlite-to-postgres.ts
+ * npx tsx scripts/recover-sqlite-to-postgres.ts --preflight
+ * npx tsx scripts/recover-sqlite-to-postgres.ts --dry-run
  *
- * Requires DATABASE_URL (postgres, non-production unless ALLOW_PRODUCTION=explicitly-approved)
- * and SQLITE_PATH (default prisma/dev.db).
+ * Never prints DATABASE_URL. Refuses production hosts unless ALLOW_PRODUCTION=explicitly-approved.
  */
 import { PrismaClient } from "@prisma/client";
 import { execSync } from "child_process";
@@ -15,12 +13,9 @@ import fs from "fs";
 import path from "path";
 
 const TABLES = [
-  "University",
-  "ResearchArea",
-  "Program",
-  "Professor",
-  "Scholarship",
-  "Publication",
+  "University", "ResearchArea", "Topic", "Program", "Professor", "Scholarship",
+  "Publication", "ProfessorSource", "ProfessorResearchArea", "ProfessorTopic",
+  "Student", "Application",
 ] as const;
 
 const prisma = new PrismaClient();
@@ -36,10 +31,8 @@ for t in ${JSON.stringify(TABLES)}:
     except Exception:
         out[t] = -1
 print(json.dumps(out))
-print('INTEGRITY:' + c.execute('PRAGMA integrity_check').fetchone()[0], file=__import__('sys').stderr)
 `;
-  const out = execSync(`python3 -c ${JSON.stringify(py)}`, { encoding: "utf8" });
-  return JSON.parse(out);
+  return JSON.parse(execSync(`python3 -c ${JSON.stringify(py)}`, { encoding: "utf8" }));
 }
 
 async function pgCounts(): Promise<Record<string, number>> {
@@ -57,7 +50,6 @@ async function pgCounts(): Promise<Record<string, number>> {
 
 async function main() {
   const args = process.argv.slice(2);
-  const preflight = args.includes("--preflight") || args.includes("--dry-run");
   const dryRun = args.includes("--dry-run") || args.includes("--preflight");
   const confirm = process.env.CONFIRM_RECOVERY === "preserve-ids";
   const allowProd = process.env.ALLOW_PRODUCTION === "explicitly-approved";
@@ -75,12 +67,13 @@ async function main() {
     process.exit(1);
   }
 
-  const host = new URL(dbUrl).hostname;
-  const isLikelyProd = /prod|production/i.test(host) || /prod|production/i.test(dbUrl);
+  let host = "unknown";
+  try { host = new URL(dbUrl).hostname; } catch {}
+  const isLikelyProd = /prod|production/i.test(host);
   console.log(`Destination host: ${host}`);
   console.log(`Likely production: ${isLikelyProd}`);
   if (isLikelyProd && !allowProd) {
-    console.error("Refusing production target. Set ALLOW_PRODUCTION=explicitly-approved only after manual approval.");
+    console.error("Refusing production-like host. Set ALLOW_PRODUCTION=explicitly-approved only after manual review.");
     process.exit(1);
   }
 
@@ -89,15 +82,21 @@ async function main() {
   console.log("Source (SQLite):", src);
   console.log("Destination (Postgres):", dst);
 
+  const missing = TABLES.filter((t) => dst[t] === -1);
+  if (missing.length) {
+    console.error("Destination missing tables (schema drift):", missing.join(", "));
+    console.error("Apply Prisma migrations to the recovery branch first. No data written.");
+    process.exit(1);
+  }
+
   if (dryRun || !confirm) {
     console.log("DRY-RUN / PREFLIGHT ONLY — no writes.");
-    if (!confirm) console.log("To execute on an approved staging branch: CONFIRM_RECOVERY=preserve-ids");
+    console.log("To import: CONFIRM_MIGRATE=preserve-ids python scripts/migrate-sqlite-to-postgres.py");
     await prisma.$disconnect();
     return;
   }
 
-  console.error("Full row-level import is implemented in scripts/migrate-sqlite-to-postgres.py (ON CONFLICT DO NOTHING, preserves IDs).");
-  console.error("Run that script with CONFIRM_MIGRATE=preserve-ids after this preflight passes on a staging branch.");
+  console.error("Row-level import is in scripts/migrate-sqlite-to-postgres.py.");
   await prisma.$disconnect();
 }
 

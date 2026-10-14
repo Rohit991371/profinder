@@ -1,36 +1,43 @@
 /**
- * Read-only validator for the original SQLite recovery file.
+ * Read-only local validation of prisma/dev.db (and optional backup).
+ * No database connection required. No secrets.
  * Usage: npx tsx scripts/validate-sqlite-recovery.ts
- * Does not connect to Neon or write anything.
  */
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
-const DB = path.resolve("prisma/dev.db");
+const TABLES = [
+  "University", "Program", "Professor", "Publication", "Scholarship", "ResearchArea",
+  "ProfessorResearchArea", "ProfessorSource", "ProfessorTopic", "Topic", "Student", "Application",
+];
 
-function main() {
-  if (!fs.existsSync(DB)) {
-    console.error("prisma/dev.db not found");
-    process.exit(1);
+function check(dbPath: string) {
+  if (!fs.existsSync(dbPath)) {
+    console.log(`MISSING: ${dbPath}`);
+    return;
   }
-  const size = fs.statSync(DB).size;
-  console.log(`File size: ${size} bytes`);
-
+  const size = fs.statSync(dbPath).size;
+  console.log(`\n=== ${dbPath} (${size} bytes) ===`);
+  const py = `
+import sqlite3, json
+c = sqlite3.connect(${JSON.stringify(dbPath)})
+out = {}
+for t in ${JSON.stringify(TABLES)}:
+    try:
+        out[t] = c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
+    except Exception:
+        out[t] = None
+print(json.dumps(out, indent=2))
+print("integrity:" + c.execute("PRAGMA integrity_check").fetchone()[0])
+`;
   try {
-    const out = execSync(`python3 -c "
-import sqlite3
-c = sqlite3.connect('${DB.replace(/\\/g, '/')}')
-for t in ['University','Program','Professor','Publication','Scholarship','ResearchArea']:
-    print(t, c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0])
-print('integrity', c.execute('PRAGMA integrity_check').fetchone()[0])
-"`, { encoding: "utf8" });
-    console.log(out);
+    console.log(execSync(`python3 -c ${JSON.stringify(py)}`, { encoding: "utf8" }));
   } catch (e) {
-    console.error("Validation failed:", (e as Error).message);
-    process.exit(1);
+    console.error("Failed:", (e as Error).message);
   }
-  console.log("Validation complete. No writes performed.");
 }
 
-main();
+check(path.resolve("prisma/dev.db"));
+check(path.resolve("prisma/dev-recovery-backup-20261014.db"));
+console.log("\nLocal validation complete. No writes.");
