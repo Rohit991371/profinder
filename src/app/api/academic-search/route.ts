@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSchema, prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { discoveryTokens, professorQueryWhere } from "@/lib/discovery";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-async function ensureAliasTable() {
-  await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "AcademicAlias" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "term" TEXT NOT NULL,
-    "normalizedTerm" TEXT NOT NULL,
-    "kind" TEXT NOT NULL,
-    "academicFieldId" TEXT,
-    "disciplineId" TEXT,
-    "majorId" TEXT
-  )`);
-  await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "AcademicAlias_normalizedTerm_kind_key" ON "AcademicAlias"("normalizedTerm", "kind")`);
-  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AcademicAlias_normalizedTerm_idx" ON "AcademicAlias"("normalizedTerm")`);
-}
-
 type Hit = { type: string; label: string; subtitle: string; href: string };
 
 export async function GET(request: NextRequest) {
-  await ensureSchema();
-  await ensureAliasTable();
   const raw = request.nextUrl.searchParams.get("q")?.trim() || "";
   if (raw.length < 2 || raw.length > 120) return NextResponse.json({ results: [] });
   const q = normalize(raw);
