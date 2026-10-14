@@ -1,0 +1,91 @@
+name: Recovery Dry-Run Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Must be dry-run. Write mode is disabled until explicit approval.'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Safety unit tests
+        run: python scripts/test-recovery-safety.py
+      - name: Read-only SQLite source counts
+        run: |
+          python - << 'PY'
+          import sqlite3, os, json
+          path = "prisma/dev.db"
+          if not os.path.exists(path):
+              print("ERROR: prisma/dev.db missing")
+              exit(1)
+          c = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+          tables = [
+            "University","Program","Professor","Publication","Scholarship","ResearchArea",
+            "ProfessorResearchArea","ProfessorSource","ProfessorTopic","Topic","Student","Application"
+          ]
+          out = {}
+          for t in tables:
+              try:
+                  out[t] = c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
+              except Exception as e:
+                  out[t] = f"ERROR: {e}"
+          print(json.dumps(out, indent=2))
+          print("integrity:", c.execute("PRAGMA integrity_check").fetchone()[0])
+          open("source-counts.json","w").write(json.dumps(out, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-counts
+          path: source-counts.json
+
+  dry-run:
+    needs: validate-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Never writes. Explicitly dry-run only.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install driver
+        run: pip install "psycopg[binary]"
+      - name: Fail closed if secret missing
+        env:
+          RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_DATABASE_URL }}
+        run: |
+          if [ -z "$RECOVERY_DATABASE_URL" ]; then
+            echo "RECOVERY_DATABASE_URL secret is not set. Dry-run cannot connect."
+            echo "Add the secret (recovery host only) to enable connection verification."
+            exit 1
+          fi
+          echo "Secret present. Host will be verified inside the script. Value not printed."
+      - name: Dry-run only (no persistent writes)
+        env:
+          DATABASE_URL: ${{ secrets.RECOVERY_DATABASE_URL }}
+          DRY_RUN: "1"
+          SQLITE_PATH: prisma/dev.db
+        run: |
+          python scripts/migrate-sqlite-to-postgres.py | tee recovery-dry-run-report.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovery-dry-run-report
+          path: recovery-dry-run-report.txt
+
+  # Write job is intentionally absent.
+  # Adding the secret must never trigger an import.
+  # A future write job would require a protected GitHub Environment
+  # with required reviewers before any CONFIRM_MIGRATE=preserve-ids step.
