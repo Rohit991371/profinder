@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
   try {
     await ensureSchema();
 
-    // Prefer a full query; fall back to a minimal one if columns or relations are missing in production.
     let universities;
     try {
       universities = await prisma.university.findMany({
@@ -43,9 +42,9 @@ export async function GET(req: NextRequest) {
         where: q
           ? {
               OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                { city: { contains: q, mode: "insensitive" } },
-                { country: { contains: q, mode: "insensitive" } },
+                { name: { contains: q } },
+                { city: { contains: q } },
+                { country: { contains: q } },
               ],
             }
           : undefined,
@@ -63,6 +62,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ universities, capped: true });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to fetch universities" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch universities", universities: [] }, { status: 500 });
   }
 }
