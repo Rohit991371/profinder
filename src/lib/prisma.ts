@@ -12,25 +12,37 @@ function resolveBundledDb() {
 }
 
 function resolveDatabaseUrl() {
-  // Temporary mode: Neon is disconnected, always use the bundled SQLite on Vercel.
-  // Data is read-only across cold starts; writes (signups, etc.) are lost on restart.
-  if (process.env.VERCEL) {
-    const bundled = resolveBundledDb();
-    const target = "/tmp/profinder.db";
-    if (!fs.existsSync(target)) {
-      if (!bundled) {
-        throw new Error("Bundled prisma/dev.db was not included in the deployment. Check next.config.mjs outputFileTracingIncludes.");
-      }
-      fs.copyFileSync(bundled, target);
-    }
-    return `file:${target}`;
+  const configured = process.env.DATABASE_URL || "";
+  // Real Postgres / external URL — use as-is
+  if (configured && !configured.startsWith("file:")) {
+    return configured;
   }
 
-  const configured = process.env.DATABASE_URL || "";
-  if (configured.startsWith("file:")) return configured;
+  // Local development: allow file: SQLite
+  if (!process.env.VERCEL) {
+    const bundled = resolveBundledDb();
+    return configured || (bundled ? `file:${bundled}` : "file:./prisma/dev.db");
+  }
 
+  // Vercel production WITHOUT a real DATABASE_URL is broken for auth.
+  // Ephemeral /tmp SQLite loses every password reset and signup on cold start.
+  if (process.env.VERCEL && process.env.VERCEL_ENV === "production") {
+    throw new Error(
+      "DATABASE_URL must be set to a persistent PostgreSQL connection string in Vercel Production. " +
+        "SQLite on /tmp is ephemeral and breaks login after password reset."
+    );
+  }
+
+  // Preview on Vercel: still allow bundled copy for non-auth demos
   const bundled = resolveBundledDb();
-  return bundled ? `file:${bundled}` : "file:./prisma/dev.db";
+  const target = "/tmp/profinder.db";
+  if (!fs.existsSync(target)) {
+    if (!bundled) {
+      throw new Error("Bundled prisma/dev.db was not included in the deployment.");
+    }
+    fs.copyFileSync(bundled, target);
+  }
+  return `file:${target}`;
 }
 
 process.env.DATABASE_URL = resolveDatabaseUrl();
@@ -43,8 +55,13 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+/** SQLite-only schema patches. No-op when DATABASE_URL is Postgres. */
 export function ensureSchema() {
-  return Promise.resolve();
+  if (!process.env.DATABASE_URL?.startsWith("file:")) return Promise.resolve();
+  if (!globalForPrisma.schemaReady) {
+    globalForPrisma.schemaReady = Promise.resolve();
+  }
+  return globalForPrisma.schemaReady;
 }
 
 void ensureSchema().catch((error) => {
