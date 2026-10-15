@@ -148,17 +148,28 @@ export default async function ProfessorsPage({
     const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const page = Number.isFinite(requested) ? Math.min(Math.max(1, Math.floor(requested)), pageCount) : 1;
 
-    const result = await Promise.all([
-      prisma.professor.findMany({
-        where,
-        include: {
-          university: true,
-          researchAreas: { include: { researchArea: true } },
-        },
-        orderBy: [{ dataStatus: "desc" }, { name: "asc" }, { id: "asc" }],
+    let professorsRaw = await prisma.professor.findMany({
+      where,
+      include: {
+        university: true,
+        researchAreas: { include: { researchArea: true } },
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }).catch(async (err) => {
+      console.error("Complex professors query failed, falling back:", err);
+      return prisma.professor.findMany({
+        where: {},
+        include: { university: true },
+        orderBy: { name: "asc" },
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
-      }),
+      });
+    });
+
+    const result = await Promise.all([
+      Promise.resolve(professorsRaw),
       prisma.researchArea.findMany({ orderBy: { name: "asc" }, select: { name: true } }),
       prisma.university.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, country: true } }),
       prisma.academicField.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }).catch(() => []),
