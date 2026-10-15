@@ -48,7 +48,9 @@ export default function Navbar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const plan = (session?.user as { plan?: string } | undefined)?.plan;
+  const role = (session?.user as { role?: string } | undefined)?.role;
   const pro = plan === "pro";
+  const isAdmin = role === "admin";
   const [moreOpen, setMoreOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -106,6 +108,15 @@ export default function Navbar() {
               {item.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={itemClass(isActive(pathname, "/admin"))}
+              aria-current={isActive(pathname, "/admin") ? "page" : undefined}
+            >
+              Admin
+            </Link>
+          )}
           <div className="relative" ref={moreRef}>
             <button
               type="button"
@@ -164,7 +175,7 @@ export default function Navbar() {
                 >
                   <div className="px-3 py-2">
                     <p className="truncate text-sm font-medium text-[var(--navy)]">{name}</p>
-                    <p className="text-xs text-[var(--gray-500)]">{pro ? "ProFinder Pro" : "Free plan"}</p>
+                    <p className="text-xs text-[var(--gray-500)]">{pro ? "ProFinder Pro" : "Free plan"}{isAdmin ? " · Admin" : ""}</p>
                   </div>
                   <Link
                     href="/profile"
@@ -194,6 +205,15 @@ export default function Navbar() {
                   >
                     Billing & Subscription
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      role="menuitem"
+                      className="block rounded-md px-3 py-2 text-sm text-[var(--gray-700)] hover:bg-[var(--gray-50)]"
+                    >
+                      Admin dashboard
+                    </Link>
+                  )}
                   <Link
                     href="/support"
                     role="menuitem"
@@ -249,6 +269,15 @@ export default function Navbar() {
             {item.label}
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={itemClass(isActive(pathname, "/admin"))}
+            aria-current={isActive(pathname, "/admin") ? "page" : undefined}
+          >
+            Admin
+          </Link>
+        )}
       </nav>
       {mobileOpen && (
         <div className="menu-panel border-t border-[var(--gray-200)] bg-white px-4 py-3 lg:hidden">
@@ -275,6 +304,11 @@ export default function Navbar() {
                 <Link href="/billing" className="rounded-md px-2 py-2 text-sm text-[var(--gray-700)]">
                   Billing & Subscription
                 </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="rounded-md px-2 py-2 text-sm text-[var(--gray-700)]">
+                    Admin dashboard
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="rounded-md px-2 py-2 text-left text-sm text-[var(--gray-700)]"
