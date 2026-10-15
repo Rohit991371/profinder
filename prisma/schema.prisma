@@ -1,6 +1,6 @@
 // PROFINDER — Database Schema
-// Temporary: using SQLite (bundled prisma/dev.db) on Vercel while Neon is disconnected.
-// Switch provider back to postgresql and restore DATABASE_URL when reconnecting Neon.
+// Production uses PostgreSQL.
+// Local dev can use SQLite if you temporarily switch the provider.
 
 generator client {
   provider      = "prisma-client-js"
@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
