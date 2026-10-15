@@ -14,19 +14,39 @@ export const metadata: Metadata = {
 
 export default async function UniversitiesPage() {
   await ensureSchema();
-  const universities = await prisma.university.findMany({
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      nameZh: true,
-      city: true,
-      province: true,
-      description: true,
-      agencyNumber: true,
-      _count: { select: { professors: true, programs: true } },
-    },
-  });
+
+  let universities: any[] = [];
+  try {
+    universities = await prisma.university.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        nameZh: true,
+        city: true,
+        province: true,
+        description: true,
+        agencyNumber: true,
+        _count: { select: { professors: true, programs: true } },
+      },
+    });
+  } catch (err) {
+    console.error("Full universities query failed, falling back:", err);
+    try {
+      universities = await prisma.university.findMany({
+        orderBy: { name: "asc" },
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          country: true,
+        },
+      });
+    } catch (fallbackErr) {
+      console.error("Fallback universities query also failed:", fallbackErr);
+      universities = [];
+    }
+  }
 
   return (
     <div className="page-container py-8">
@@ -50,8 +70,8 @@ export default async function UniversitiesPage() {
               province={u.province}
               description={u.description}
               agencyNumber={u.agencyNumber}
-              professorCount={u._count.professors}
-              programCount={u._count.programs}
+              professorCount={u._count?.professors ?? 0}
+              programCount={u._count?.programs ?? 0}
             />
           ))}
         </div>
