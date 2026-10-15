@@ -11,38 +11,3 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
-model University {
-  id                  String   @id @default(cuid())
-  name                String
-  nameZh              String?
-  country             String   @default("China")
-  province            String?
-  city                String?
-  officialUrl         String?
-  sourceUrl           String?
-  description         String?
-  agencyNumber        String?
-  openAlexId          String?
-  logoUrl             String?
-  dataStatus          String   @default("unverified")
-  dataSource          String?
-  applicationUrl      String?
-  applicationFee      String?
-  applicationDeadline String?
-  scholarshipUrl      String?
-  scholarshipDeadline String?
-  verifiedAt          DateTime?
-  verificationStatus  String   @default("UNVERIFIED")
-  lastCheckedAt       DateTime?
-  confidence          Float?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  programs      Program[]
-  professors    Professor[]
-  scholarships  Scholarship[]
-  colleges      College[]
-  departments   Department[]
-  applyItems    ApplyRequestItem[]
-}
