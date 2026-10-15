@@ -12,20 +12,20 @@ function resolveBundledDb() {
 }
 
 function resolveDatabaseUrl() {
-  // Always use bundled SQLite on Vercel (Neon is not used).
+  // Force SQLite on Vercel using the bundled file. Ignore any Neon/Postgres URL.
   if (process.env.VERCEL) {
     const bundled = resolveBundledDb();
     const target = "/tmp/profinder.db";
-    if (!fs.existsSync(target)) {
-      if (!bundled) {
-        throw new Error("Bundled prisma/dev.db was not included in the deployment. Check next.config.mjs outputFileTracingIncludes.");
+    try {
+      if (!fs.existsSync(target) && bundled) {
+        fs.copyFileSync(bundled, target);
       }
-      fs.copyFileSync(bundled, target);
+    } catch (e) {
+      console.error("Failed to copy bundled db:", e);
     }
     return `file:${target}`;
   }
 
-  // Local development
   const configured = process.env.DATABASE_URL || "";
   if (configured.startsWith("file:")) return configured;
 
@@ -33,13 +33,18 @@ function resolveDatabaseUrl() {
   return bundled ? `file:${bundled}` : "file:./prisma/dev.db";
 }
 
-process.env.DATABASE_URL = resolveDatabaseUrl();
+// Override before PrismaClient is created
+const dbUrl = resolveDatabaseUrl();
+process.env.DATABASE_URL = dbUrl;
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-});
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    datasources: { db: { url: dbUrl } },
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
