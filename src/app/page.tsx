@@ -60,6 +60,17 @@ export default async function HomePage() {
   const applications = student
     ? await prisma.application.findMany({ where: { studentId: student.id }, include: { professor: { include: { university: true } } }, orderBy: { updatedAt: "desc" }, take: 3 })
     : [];
+  const applyRequests = student
+    ? await prisma.applyRequest.findMany({
+        where: { studentId: student.id },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          documents: { select: { id: true, kind: true, name: true, size: true, createdAt: true } },
+          items: { select: { university: { select: { name: true } } } },
+        },
+      })
+    : [];
   const next = applications[0]
     ? applicationPlan({ hasProfile: Boolean(student?.degree && student?.researchInterests), hasEnglish: Boolean(student?.englishTest?.trim()), hasTarget: true, status: applications[0].status, documents: parseDocuments(applications[0].documentsJson) }).next
     : student?.researchInterests
@@ -115,6 +126,28 @@ export default async function HomePage() {
             <article className="card p-4"><h3 className="font-semibold text-[var(--navy)]">Scholarships</h3><ul className="mt-2 space-y-2 text-sm text-[var(--gray-700)]">{scholarships.map((row) => (<li key={row.id}>{row.name} · {row.fit.score}% · {row.university}</li>))}{scholarships.length === 0 && <li>No scholarship record is stored.</li>}</ul></article>
             <article className="card p-4"><h3 className="font-semibold text-[var(--navy)]">Applications</h3><ul className="mt-2 space-y-2 text-sm text-[var(--gray-700)]">{applications.map((row) => (<li key={row.id}>{row.professor?.name || row.programName || "Saved item"} · {row.status}</li>))}{applications.length === 0 && <li>Nothing is on the tracker yet.</li>}</ul><Link href="/tracker" className="mt-3 inline-flex text-sm font-semibold text-[var(--teal)]">Open tracker</Link></article>
           </div>
+          {applyRequests.length > 0 && (
+            <article className="card mt-4 p-4">
+              <h3 className="font-semibold text-[var(--navy)]">Apply for Me requests & documents</h3>
+              <ul className="mt-2 space-y-3 text-sm text-[var(--gray-700)]">
+                {applyRequests.map((req) => (
+                  <li key={req.id} className="rounded border border-[var(--gray-200)] p-3">
+                    <p className="font-medium">Request {req.id.slice(0, 8)} · {req.status} · {req.items.length} unis</p>
+                    {req.documents.length > 0 ? (
+                      <ul className="mt-1 list-inside list-disc text-xs text-gray-600">
+                        {req.documents.map((doc) => (
+                          <li key={doc.id}>{doc.kind}: {doc.name} ({Math.round(doc.size / 1024)} KB)</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-xs text-gray-500">No documents uploaded yet.</p>
+                    )}
+                    <Link href="/apply" className="mt-2 inline-flex text-xs font-semibold text-[var(--teal)]">View in Apply for Me</Link>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          )}
         </section>
       )}
       <section className="band-lavender py-10">
