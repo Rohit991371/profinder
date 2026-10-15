@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateOutreachEmail } from "@/lib/email-generator";
+import { generateOutreachEmail, generateOutreachEmailAI } from "@/lib/email-generator";
 import { consumeUsage, isPro, limitMessage } from "@/lib/billing/usage";
 import { FEATURES } from "@/lib/billing/plans";
 
@@ -27,11 +27,15 @@ export async function POST(req: NextRequest) {
 
   const professor = await prisma.professor.findUnique({
     where: { id: professorId },
-    include: { university: true, researchAreas: { include: { researchArea: true } } },
+    include: {
+      university: true,
+      researchAreas: { include: { researchArea: true } },
+      publicationRows: { orderBy: { year: "desc" }, take: 5 },
+    },
   });
   if (!professor) return NextResponse.json({ error: "Professor not found" }, { status: 404 });
 
-  const email = generateOutreachEmail({
+  const input = {
     studentName: student.name,
     studentDegree: student.degree,
     studentMajor: student.major,
@@ -39,6 +43,10 @@ export async function POST(req: NextRequest) {
     studentInterests: student.researchInterests,
     studentSkills: student.skills,
     studentProjects: student.projects,
+    studentResearchExperience: student.researchExperience,
+    studentGpa: student.gpa,
+    studentTargetDegree: student.targetDegreeLevel || student.degree,
+    studentIntake: student.intake,
     professorName: professor.name,
     professorPosition: professor.position,
     professorDepartment: professor.department,
@@ -46,7 +54,14 @@ export async function POST(req: NextRequest) {
     universityName: professor.university.name,
     researchAreas: professor.researchAreas.map((r) => r.researchArea.name),
     publications: professor.publications,
-  });
+    publicationTitles: professor.publicationRows.map((p) => ({ title: p.title, year: p.year })),
+    purpose: typeof body.purpose === "string" ? body.purpose : null,
+    tone: typeof body.tone === "string" ? body.tone : null,
+  };
+
+  const email = process.env.OPENAI_API_KEY
+    ? await generateOutreachEmailAI(input)
+    : generateOutreachEmail(input);
 
   if (email.missing.length) {
     return NextResponse.json(
@@ -63,15 +78,18 @@ export async function POST(req: NextRequest) {
     subject: email.subject,
     body: email.body,
     source: email.source,
-    disclaimer: "Review and edit this draft before sending. PROFINDER does not send emails.",
+    relevantPublication: email.relevantPublication || null,
+    disclaimer: "Review and edit this draft before sending. PROFINDER does not send emails and never invents facts.",
     facts: [
       student.name ? `Your name: ${student.name}` : "Your name is missing",
-      student.degree ? `Degree: ${student.degree}` : "Degree is missing",
+      (student.targetDegreeLevel || student.degree) ? `Degree: ${student.targetDegreeLevel || student.degree}` : "Degree is missing",
       student.major ? `Major: ${student.major}` : "Major is missing",
       student.researchInterests ? `Your interests: ${student.researchInterests}` : "Research interests are missing",
+      student.projects ? `Projects on file: ${student.projects.slice(0, 120)}…` : null,
       `Professor: ${professor.name}`,
       professor.researchInterests ? `Professor interests on file: ${professor.researchInterests}` : "No professor research summary is stored",
+      professor.publicationRows.length ? `Stored publications: ${professor.publicationRows.length}` : "No individual publication titles stored",
       professor.email ? `Email on file: ${professor.email}` : "No email is stored for this professor",
-    ],
+    ].filter(Boolean),
   });
 }

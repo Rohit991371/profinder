@@ -1,15 +1,8 @@
 /**
  * Transparent, deterministic research match.
- *
- * Weights:
- * - Research-interest similarity: 40%
- * - Research-area similarity: 20%
- * - Topic/keyword similarity (from stored interests & area keywords, not live papers): 20%
- * - Academic background / major: 10%
- * - Degree / level: 10%
- *
- * Publication text is used only when it is actually stored. The explanation never
- * claims a paper was read.
+ * Enhanced explanations that surface concrete connections from student projects,
+ * skills, and experience against professor areas and stored publications.
+ * Never invents facts.
  */
 
 export type StudentProfile = {
@@ -20,6 +13,10 @@ export type StudentProfile = {
   academicBackground?: string | null;
   projects?: string | null;
   cvText?: string | null;
+  researchExperience?: string | null;
+  tools?: string | null;
+  programmingLanguages?: string | null;
+  gpa?: string | null;
 };
 
 export type ProfessorProfile = {
@@ -101,7 +98,7 @@ export function computeResearchMatch(
   const missing = profileGaps(student);
   const interestTokens = tokenize(student.researchInterests);
   const backgroundTokens = tokenize(
-    [student.academicBackground, student.major, student.skills, student.projects, student.cvText]
+    [student.academicBackground, student.major, student.skills, student.projects, student.cvText, student.researchExperience, student.tools, student.programmingLanguages]
       .filter(Boolean)
       .join(" ")
   );
@@ -163,6 +160,15 @@ export function computeResearchMatch(
   if (strongAreas.length) reasons.push(`Research area overlap: ${strongAreas.join(", ")}`);
   if (matchedKeywords.length) reasons.push(`Shared terms: ${matchedKeywords.join(", ")}`);
   if (major && majorRelevance >= 0.2) reasons.push(`Your ${student.major} background is relevant to this department/field`);
+
+  // Concrete connection from student projects/experience
+  if (student.projects?.trim() && matchedKeywords.length) {
+    const projSnippet = student.projects.trim().split(/[.,;]/)[0].slice(0, 80);
+    reasons.push(`Your project (“${projSnippet}…”) shares terms with this professor’s work`);
+  } else if (student.researchExperience?.trim() && matchedKeywords.length) {
+    reasons.push("Stored research experience overlaps with the professor’s areas");
+  }
+
   if (professor.publications?.trim()) {
     reasons.push("Stored publication summary was included in topic similarity. This does not mean a specific paper was read.");
   } else {
@@ -171,7 +177,7 @@ export function computeResearchMatch(
 
   const explanation = incomplete
     ? "Add research interests on your profile before a personalized match can be calculated."
-    : reasons.slice(0, 3).join(". ") + ".";
+    : reasons.slice(0, 4).join(". ") + ".";
 
   return {
     score,

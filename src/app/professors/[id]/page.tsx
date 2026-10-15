@@ -120,6 +120,10 @@ export default async function ProfessorDetailPage({ params }: Props) {
           academicBackground: student.academicBackground,
           projects: student.projects,
           cvText: student.cvText,
+          researchExperience: student.researchExperience,
+          tools: student.tools,
+          programmingLanguages: student.programmingLanguages,
+          gpa: student.gpa,
         },
         {
           researchInterests: prof.researchInterests,
