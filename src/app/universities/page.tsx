@@ -20,7 +20,6 @@ export default async function UniversitiesPage() {
     universities = await prisma.university.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
-      take: 50,
     });
   } catch (err: any) {
     errorMsg = err?.message || String(err);
