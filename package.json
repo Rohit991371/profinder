@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "rm -rf node_modules/.prisma && prisma generate && next build",
+    "build": "node scripts/prepare-bundled-sqlite.cjs && prisma generate && next build",
     "sync:academic": "tsx scripts/sync-academic-foundation.ts",
     "start": "next start",
     "lint": "next lint",
