@@ -12,37 +12,25 @@ function resolveBundledDb() {
 }
 
 function resolveDatabaseUrl() {
-  const configured = process.env.DATABASE_URL || "";
-  // Real Postgres / external URL — use as-is
-  if (configured && !configured.startsWith("file:")) {
-    return configured;
-  }
-
-  // Local development: allow file: SQLite
-  if (!process.env.VERCEL) {
+  // Temporary: always use the bundled SQLite database on Vercel
+  // (Neon is disconnected). Local dev still respects file: DATABASE_URL.
+  if (process.env.VERCEL) {
     const bundled = resolveBundledDb();
-    return configured || (bundled ? `file:${bundled}` : "file:./prisma/dev.db");
-  }
-
-  // Vercel production WITHOUT a real DATABASE_URL is broken for auth.
-  // Ephemeral /tmp SQLite loses every password reset and signup on cold start.
-  if (process.env.VERCEL && process.env.VERCEL_ENV === "production") {
-    throw new Error(
-      "DATABASE_URL must be set to a persistent PostgreSQL connection string in Vercel Production. " +
-        "SQLite on /tmp is ephemeral and breaks login after password reset."
-    );
-  }
-
-  // Preview on Vercel: still allow bundled copy for non-auth demos
-  const bundled = resolveBundledDb();
-  const target = "/tmp/profinder.db";
-  if (!fs.existsSync(target)) {
-    if (!bundled) {
-      throw new Error("Bundled prisma/dev.db was not included in the deployment.");
+    const target = "/tmp/profinder.db";
+    if (!fs.existsSync(target)) {
+      if (!bundled) {
+        throw new Error("Bundled prisma/dev.db was not included in the deployment.");
+      }
+      fs.copyFileSync(bundled, target);
     }
-    fs.copyFileSync(bundled, target);
+    return `file:${target}`;
   }
-  return `file:${target}`;
+
+  const configured = process.env.DATABASE_URL || "";
+  if (configured && configured.startsWith("file:")) return configured;
+
+  const bundled = resolveBundledDb();
+  return bundled ? `file:${bundled}` : "file:./prisma/dev.db";
 }
 
 process.env.DATABASE_URL = resolveDatabaseUrl();
