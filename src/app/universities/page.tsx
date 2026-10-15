@@ -16,20 +16,38 @@ export default async function UniversitiesPage() {
 
   let universities: { id: string; name: string }[] = [];
   let errorMsg = "";
+  let count = 0;
+
   try {
-    universities = await prisma.university.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    });
-  } catch (err: any) {
-    errorMsg = err?.message || String(err);
-    console.error("Universities query failed:", err);
+    count = await prisma.university.count();
+  } catch (e: any) {
+    errorMsg = "Count failed: " + (e?.message || String(e));
+  }
+
+  if (!errorMsg) {
+    try {
+      universities = await prisma.university.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      });
+    } catch (err: any) {
+      errorMsg = "findMany failed: " + (err?.message || String(err));
+      // Fallback: try without orderBy
+      try {
+        universities = await prisma.university.findMany({
+          select: { id: true, name: true },
+        });
+        errorMsg = "";
+      } catch {
+        // keep the error
+      }
+    }
   }
 
   return (
     <div className="page-container py-8">
       <h1 className="section-title">Universities</h1>
-      <p className="mt-1 text-sm text-gray-600">{universities.length} stored</p>
+      <p className="mt-1 text-sm text-gray-600">{universities.length || count} stored</p>
       {errorMsg && (
         <pre className="mt-4 overflow-auto rounded bg-red-50 p-3 text-xs text-red-800">{errorMsg}</pre>
       )}
