@@ -89,14 +89,18 @@ export default async function ProfessorsPage({
   let aliasDisciplineIds: string[] = [];
   let aliasMajorIds: string[] = [];
   if (q && q.length >= 2) {
-    const aliases = await prisma.academicAlias.findMany({
-      where: { OR: [{ term: { contains: q } }, { normalizedTerm: { contains: normalizeTerm(q) } }] },
-      select: { academicFieldId: true, disciplineId: true, majorId: true },
-      take: 12,
-    });
-    aliasFieldIds = aliases.map((row) => row.academicFieldId).filter((id): id is string => Boolean(id));
-    aliasDisciplineIds = aliases.map((row) => row.disciplineId).filter((id): id is string => Boolean(id));
-    aliasMajorIds = aliases.map((row) => row.majorId).filter((id): id is string => Boolean(id));
+    try {
+      const aliases = await prisma.academicAlias.findMany({
+        where: { OR: [{ term: { contains: q } }, { normalizedTerm: { contains: normalizeTerm(q) } }] },
+        select: { academicFieldId: true, disciplineId: true, majorId: true },
+        take: 12,
+      });
+      aliasFieldIds = aliases.map((row) => row.academicFieldId).filter((id): id is string => Boolean(id));
+      aliasDisciplineIds = aliases.map((row) => row.disciplineId).filter((id): id is string => Boolean(id));
+      aliasMajorIds = aliases.map((row) => row.majorId).filter((id): id is string => Boolean(id));
+    } catch {
+      // aliases table may not exist yet
+    }
   }
 
   const where = {
@@ -131,27 +135,44 @@ export default async function ProfessorsPage({
     ],
   };
 
-  const total = await prisma.professor.count({ where });
+  let total = 0;
+  let professors: any[] = [];
+  let areas: { name: string }[] = [];
+  let universities: { id: string; name: string; country: string | null }[] = [];
+  let fields: { id: string; name: string }[] = [];
+  let disciplines: { id: string; name: string; academicFieldId: string }[] = [];
+  let majors: { id: string; name: string; officialName: string | null; disciplineId: string }[] = [];
+
+  try {
+    total = await prisma.professor.count({ where });
+    const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const page = Number.isFinite(requested) ? Math.min(Math.max(1, Math.floor(requested)), pageCount) : 1;
+
+    const result = await Promise.all([
+      prisma.professor.findMany({
+        where,
+        include: {
+          university: true,
+          researchAreas: { include: { researchArea: true } },
+        },
+        orderBy: [{ dataStatus: "desc" }, { name: "asc" }, { id: "asc" }],
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.researchArea.findMany({ orderBy: { name: "asc" }, select: { name: true } }),
+      prisma.university.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, country: true } }),
+      prisma.academicField.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }).catch(() => []),
+      prisma.discipline.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, academicFieldId: true } }).catch(() => []),
+      prisma.major.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, officialName: true, disciplineId: true } }).catch(() => []),
+    ]);
+    [professors, areas, universities, fields, disciplines, majors] = result as any;
+  } catch (err) {
+    console.error("Professors page query failed:", err);
+    // fall back to empty so the page still renders
+  }
+
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Number.isFinite(requested) ? Math.min(Math.max(1, Math.floor(requested)), pageCount) : 1;
-
-  const [professors, areas, universities, fields, disciplines, majors] = await Promise.all([
-    prisma.professor.findMany({
-      where,
-      include: {
-        university: true,
-        researchAreas: { include: { researchArea: true } },
-      },
-      orderBy: [{ dataStatus: "desc" }, { name: "asc" }, { id: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
-    prisma.researchArea.findMany({ orderBy: { name: "asc" }, select: { name: true } }),
-    prisma.university.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, country: true } }),
-    prisma.academicField.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.discipline.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, academicFieldId: true } }),
-    prisma.major.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, officialName: true, disciplineId: true } }),
-  ]);
 
   const session = await getServerSession(authOptions);
   const student = session?.user?.email
@@ -265,7 +286,7 @@ export default async function ProfessorsPage({
                       researchInterests: p.researchInterests,
                       department: p.department,
                       publications: p.publications,
-                      researchAreas: p.researchAreas.map((area) => ({
+                      researchAreas: p.researchAreas.map((area: any) => ({
                         name: area.researchArea.name,
                         keywords: area.researchArea.keywords,
                       })),
@@ -288,7 +309,7 @@ export default async function ProfessorsPage({
                   department={p.department}
                   universityName={p.university.name}
                   universityCity={p.university.city}
-                  researchAreas={p.researchAreas.map((r) => r.researchArea.name)}
+                  researchAreas={p.researchAreas.map((r: any) => r.researchArea.name)}
                   researchInterests={p.researchInterests}
                   verified={p.dataStatus === "verified"}
                   email={p.email}
