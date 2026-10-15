@@ -1,68 +1,89 @@
 import type { Metadata } from "next";
 import { ensureSchema, prisma } from "@/lib/prisma";
-import Link from "next/link";
+import UniversityCard from "@/components/UniversityCard";
+import PageHeader from "@/components/PageHeader";
 import { SITE } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "Universities | ProFinder" },
-  description: "Chinese universities with stored programs and professor records.",
+  description: "Chinese universities with stored programs and professor records. Open a university to see what is actually on file.",
   alternates: { canonical: `${SITE}/universities` },
 };
 
 export default async function UniversitiesPage() {
   await ensureSchema();
 
-  let universities: { id: string; name: string }[] = [];
+  let universities: any[] = [];
   let errorMsg = "";
-  let count = 0;
 
   try {
-    count = await prisma.university.count();
-  } catch (e: any) {
-    errorMsg = "Count failed: " + (e?.message || String(e));
-  }
-
-  if (!errorMsg) {
+    universities = await prisma.university.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        nameZh: true,
+        city: true,
+        province: true,
+        description: true,
+        agencyNumber: true,
+        _count: { select: { professors: true, programs: true } },
+      },
+    });
+  } catch (err: any) {
+    console.error("Universities with counts failed, falling back:", err);
+    errorMsg = err?.message || String(err);
     try {
       universities = await prisma.university.findMany({
         orderBy: { name: "asc" },
-        select: { id: true, name: true },
+        select: {
+          id: true,
+          name: true,
+          nameZh: true,
+          city: true,
+          province: true,
+          description: true,
+          agencyNumber: true,
+        },
       });
-    } catch (err: any) {
-      errorMsg = "findMany failed: " + (err?.message || String(err));
-      // Fallback: try without orderBy
-      try {
-        universities = await prisma.university.findMany({
-          select: { id: true, name: true },
-        });
-        errorMsg = "";
-      } catch {
-        // keep the error
-      }
+      errorMsg = "";
+    } catch (e2: any) {
+      errorMsg = e2?.message || String(e2);
     }
   }
 
   return (
     <div className="page-container py-8">
-      <h1 className="section-title">Universities</h1>
-      <p className="mt-1 text-sm text-gray-600">{universities.length || count} stored</p>
+      <PageHeader
+        title="Universities"
+        description="China · multidisciplinary graduate-study discovery"
+      />
       {errorMsg && (
         <pre className="mt-4 overflow-auto rounded bg-red-50 p-3 text-xs text-red-800">{errorMsg}</pre>
       )}
-      {universities.length === 0 && !errorMsg ? (
-        <p className="mt-8 text-sm text-gray-500">No universities loaded (query returned empty).</p>
+      {universities.length === 0 ? (
+        <div className="empty-state mt-8 rounded-lg border border-dashed border-[var(--gray-200)] bg-white px-6 py-12 text-center">
+          <p className="text-sm text-[var(--gray-500)]">No universities yet.</p>
+        </div>
       ) : (
-        <ul className="mt-6 space-y-2">
+        <div className="reveal-grid mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {universities.map((u) => (
-            <li key={u.id}>
-              <Link href={`/universities/${u.id}`} className="text-[var(--navy)] hover:underline">
-                {u.name}
-              </Link>
-            </li>
+            <UniversityCard
+              key={u.id}
+              id={u.id}
+              name={u.name}
+              nameZh={u.nameZh}
+              city={u.city}
+              province={u.province}
+              description={u.description}
+              agencyNumber={u.agencyNumber}
+              professorCount={u._count?.professors ?? 0}
+              programCount={u._count?.programs ?? 0}
+            />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
