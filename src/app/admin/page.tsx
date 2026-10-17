@@ -467,7 +467,6 @@ export default async function AdminPage({
       <div id="apply">
         <AdminApplyRequests />
       </div>
-      <div id="documents" className="scroll-mt-6" />
 
       <section id="payments" className="mt-12">
         <h2 className="text-lg font-semibold text-[var(--navy)]">Payments</h2>
