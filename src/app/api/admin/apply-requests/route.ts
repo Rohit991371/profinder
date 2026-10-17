@@ -50,7 +50,29 @@ export async function GET() {
       },
     },
   });
-  return NextResponse.json({ requests });
+  const requestIds = requests.map((request) => request.id);
+  let latestNotes: Record<string, string> = {};
+  if (requestIds.length) {
+    try {
+      const changes = await prisma.changeLog.findMany({
+        where: { entityType: "ApplyRequest", entityId: { in: requestIds }, changeType: "ADMIN_STATUS_UPDATED" },
+        orderBy: { detectedAt: "desc" },
+        select: { entityId: true, afterJson: true },
+      });
+      for (const change of changes) {
+        if (latestNotes[change.entityId]) continue;
+        try {
+          const parsed = JSON.parse(change.afterJson || "{}") as { note?: unknown };
+          if (typeof parsed.note === "string") latestNotes[change.entityId] = parsed.note;
+        } catch { /* Ignore malformed historical audit entries. */ }
+      }
+    } catch (error) {
+      console.error("[admin/apply-requests] could not load internal notes", error);
+    }
+  }
+  return NextResponse.json({
+    requests: requests.map((request) => ({ ...request, adminNote: latestNotes[request.id] || "" })),
+  });
 }
 
 export async function PATCH(req: NextRequest) {
