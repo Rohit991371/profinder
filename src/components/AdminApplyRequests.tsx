@@ -109,7 +109,7 @@ export default function AdminApplyRequests() {
   }
 
   return (
-    <section className="mt-12" aria-labelledby="apply-requests-heading">
+    <section id="documents" className="mt-12 scroll-mt-6" aria-labelledby="apply-requests-heading">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 id="apply-requests-heading" className="text-lg font-semibold text-[var(--navy)]">Apply for Me requests</h2>
