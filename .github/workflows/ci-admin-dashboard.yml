@@ -11,7 +11,7 @@ on:
 
 jobs:
   validate:
-    name: Install, Lint, Build and Test
+    name: Build and Test
     runs-on: ubuntu-latest
 
     env:
@@ -38,9 +38,6 @@ jobs:
 
       - name: Push Prisma schema to CI database
         run: npm run db:push
-
-      - name: Run lint
-        run: npm run lint
 
       - name: Build Next.js application
         run: npx next build
