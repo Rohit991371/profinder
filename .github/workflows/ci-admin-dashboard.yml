@@ -1,0 +1,46 @@
+
+name: CI - Admin Dashboard Validation
+
+on:
+  push:
+    branches:
+      - feat/admin-dashboard-phase1
+  pull_request:
+    branches:
+      - feat/admin-dashboard-phase1
+
+jobs:
+  validate:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_OPTIONS: --max_old_space_size=4096
+      NEXTAUTH_SECRET: ci-only-development-secret
+      DATABASE_URL: file:./ci.db
+      CI: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Push Prisma schema to CI database
+        run: npm run db:push
+
+      - name: Build Next.js application
+        run: npx next build
+
+      - name: Run tests
+        run: npm run test
