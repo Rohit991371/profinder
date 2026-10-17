@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import AdminReview from "@/components/AdminReview";
+import AdminApplyRequests from "@/components/AdminApplyRequests";
 import { hasProAccess } from "@/lib/billing/access";
 
 export const dynamic = "force-dynamic";
@@ -463,19 +464,10 @@ export default async function AdminPage({
         </div>
       </section>
 
-      <section id="apply" className="mt-12">
-        <h2 className="text-lg font-semibold text-[var(--navy)]">Apply for Me</h2>
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Apply for Me workflow and admin action management are not part of this phase. The existing request and document models are in place, and this section will be expanded in the next phase with filters, request status updates, and internal notes.
-        </div>
-      </section>
-
-      <section id="documents" className="mt-12">
-        <h2 className="text-lg font-semibold text-[var(--navy)]">Documents</h2>
-        <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          Secure document review and download controls are planned for a later phase. Existing storage is kept private and intentionally not exposed via public URLs.
-        </div>
-      </section>
+      <div id="apply">
+        <AdminApplyRequests />
+      </div>
+      <div id="documents" className="scroll-mt-6" />
 
       <section id="payments" className="mt-12">
         <h2 className="text-lg font-semibold text-[var(--navy)]">Payments</h2>
