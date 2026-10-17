@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import AdminReview from "@/components/AdminReview";
 import AdminApplyRequests from "@/components/AdminApplyRequests";
+import AdminUserManagement from "@/components/AdminUserManagement";
+import AdminPayments from "@/components/AdminPayments";
+import AdminAnalytics from "@/components/AdminAnalytics";
+import AdminAuditLog from "@/components/AdminAuditLog";
 import { hasProAccess } from "@/lib/billing/access";
 
 export const dynamic = "force-dynamic";
@@ -462,18 +466,14 @@ export default async function AdminPage({
             </a>
           </div>
         </div>
+        <AdminUserManagement />
       </section>
 
       <div id="apply">
         <AdminApplyRequests />
       </div>
 
-      <section id="payments" className="mt-12">
-        <h2 className="text-lg font-semibold text-[var(--navy)]">Payments</h2>
-        <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          Payment and revenue reporting is limited to confirmed paid Apply for Me requests in the current schema. Subscription revenue is not included because the repo does not persist a complete provider payment ledger for Stripe events.
-        </div>
-      </section>
+      <AdminPayments />
 
       <section id="academic" className="mt-12">
         <h2 className="text-lg font-semibold text-[var(--navy)]">Academic database</h2>
@@ -515,19 +515,8 @@ export default async function AdminPage({
         <AdminReview />
       </section>
 
-      <section id="analytics" className="mt-12">
-        <h2 className="text-lg font-semibold text-[var(--navy)]">Analytics</h2>
-        <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          Analytics and trend charts are planned for a later phase. Existing records can support them once the dashboard is wired to the specific query set used for registration, conversion, and revenue reporting.
-        </div>
-      </section>
-
-      <section id="audit" className="mt-12">
-        <h2 className="text-lg font-semibold text-[var(--navy)]">Audit log</h2>
-        <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
-          Audit viewing is available through the recent source changes block and the ChangeLog model. Full admin-action capture is reserved for a follow-up phase to ensure only safe, supported changes are recorded.
-        </div>
-      </section>
+      <AdminAnalytics />
+      <AdminAuditLog />
     </div>
   );
 }
