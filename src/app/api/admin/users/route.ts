@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
   }
   if (target.role === role) return NextResponse.json({ user: target, unchanged: true });
   try {
-    const [updated] = await prisma.$transaction([
+    const [, updated] = await prisma.$transaction([
       prisma.changeLog.create({
         data: {
           entityType: "Student",
