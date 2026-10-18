@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   const where = q ? { OR: [{ name: { contains: q } }, { type: { contains: q } }, { university: { name: { contains: q } } }] } : undefined;
   const [totalCount, rows] = await Promise.all([
     prisma.scholarship.count({ where }),
-    prisma.scholarship.findMany({ where, orderBy: { name: "asc" }, skip, take: pageSize, select: { id: true, name: true, type: true, officialUrl: true, verificationStatus: true, dataStatus: true, deadline: true, updatedAt: true, university: { select: { name: true } } } }),
+    prisma.scholarship.findMany({ where, orderBy: { name: "asc" }, skip, take: pageSize, select: { id: true, name: true, type: true, officialUrl: true, verificationStatus: true, dataStatus: true, deadline: true, university: { select: { name: true } } } }),
   ]);
   return NextResponse.json({ entity, rows: rows.map((row) => ({ ...row, universityName: row.university?.name || "Not linked" })), pagination: { page, pageSize, totalCount, totalPages: Math.max(1, Math.ceil(totalCount / pageSize)) } });
 }
