@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseAdminPagination } from "@/lib/admin-pagination";
+import { canMarkSubmitted } from "@/lib/apply-approval";
 
 const REQUEST_STATUSES = [
   "draft",
@@ -139,7 +140,7 @@ export async function PATCH(req: NextRequest) {
   });
   if (!existing) return NextResponse.json({ error: "Apply for Me request not found." }, { status: 404 });
   if (status === "submitted" && existing.status !== "submitted" &&
-      (existing.items.length === 0 || existing.items.some((item) => item.status !== "approved"))) {
+      !canMarkSubmitted(existing.items.map((item) => item.status))) {
     return NextResponse.json({
       error: "A request cannot be marked submitted until the student has approved every application.",
     }, { status: 409 });
