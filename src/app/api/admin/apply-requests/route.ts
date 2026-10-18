@@ -15,6 +15,9 @@ const REQUEST_STATUSES = [
   "cancelled",
 ] as const;
 
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email?.trim().toLowerCase();
@@ -31,27 +34,63 @@ async function requireAdmin() {
   return student && (student.role === "admin" || configured) ? student : null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const requests = await prisma.applyRequest.findMany({
-    orderBy: { updatedAt: "desc" },
-    take: 100,
-    include: {
-      student: { select: { id: true, name: true, email: true } },
-      items: {
-        orderBy: { createdAt: "asc" },
-        include: { university: { select: { id: true, name: true, country: true, city: true } } },
+  const params = req.nextUrl.searchParams;
+  const requestedPage = Number.parseInt(params.get("page") || "1", 10);
+  const requestedPageSize = Number.parseInt(params.get("pageSize") || String(DEFAULT_PAGE_SIZE), 10);
+  const page = Number.isFinite(requestedPage) ? Math.max(1, requestedPage) : 1;
+  const pageSize = Number.isFinite(requestedPageSize)
+    ? Math.min(MAX_PAGE_SIZE, Math.max(1, requestedPageSize))
+    : DEFAULT_PAGE_SIZE;
+  const statusParam = (params.get("status") || "").trim();
+  const query = (params.get("q") || "").trim().slice(0, 120);
+
+  if (statusParam && statusParam !== "all" && !REQUEST_STATUSES.includes(statusParam as (typeof REQUEST_STATUSES)[number])) {
+    return NextResponse.json({ error: "Choose a valid request status." }, { status: 400 });
+  }
+
+  const where = {
+    ...(statusParam && statusParam !== "all" ? { status: statusParam } : {}),
+    ...(query ? {
+      OR: [
+        { id: { contains: query } },
+        { student: { name: { contains: query } } },
+        { student: { email: { contains: query } } },
+        { items: { some: { university: { name: { contains: query } } } } },
+      ],
+    } : {}),
+  };
+
+  const [totalCount, statusCounts, requests] = await Promise.all([
+    prisma.applyRequest.count({ where }),
+    Promise.all(REQUEST_STATUSES.map(async (status) => [
+      status,
+      await prisma.applyRequest.count({ where: { status } }),
+    ] as const)),
+    prisma.applyRequest.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        student: { select: { id: true, name: true, email: true } },
+        items: {
+          orderBy: { createdAt: "asc" },
+          include: { university: { select: { id: true, name: true, country: true, city: true } } },
+        },
+        documents: {
+          orderBy: { createdAt: "desc" },
+          select: { id: true, kind: true, name: true, size: true, createdAt: true },
+        },
       },
-      documents: {
-        orderBy: { createdAt: "desc" },
-        select: { id: true, kind: true, name: true, size: true, createdAt: true },
-      },
-    },
-  });
+    }),
+  ]);
+
   const requestIds = requests.map((request) => request.id);
-  let latestNotes: Record<string, string> = {};
+  const latestNotes: Record<string, string> = {};
   if (requestIds.length) {
     try {
       const changes = await prisma.changeLog.findMany({
@@ -70,8 +109,17 @@ export async function GET() {
       console.error("[admin/apply-requests] could not load internal notes", error);
     }
   }
+
   return NextResponse.json({
     requests: requests.map((request) => ({ ...request, adminNote: latestNotes[request.id] || "" })),
+    pagination: {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+    },
+    statusCounts: Object.fromEntries(statusCounts),
+    filters: { status: statusParam || "all", q: query },
   });
 }
 
@@ -89,7 +137,7 @@ export async function PATCH(req: NextRequest) {
 
   const existing = await prisma.applyRequest.findUnique({
     where: { id },
-    select: { id: true, status: true, paymentStatus: true, studentNote: true },
+    select: { id: true, status: true, paymentStatus: true },
   });
   if (!existing) return NextResponse.json({ error: "Apply for Me request not found." }, { status: 404 });
   if (status === "completed" && existing.paymentStatus !== "paid") {
@@ -115,8 +163,6 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
-    // Do not turn a successful request update into a failed response if the
-    // optional audit table has not yet been deployed.
     console.error("[admin/apply-requests] status changed but audit write failed", error);
   }
 
