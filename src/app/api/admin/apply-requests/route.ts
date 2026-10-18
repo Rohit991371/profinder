@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
         { id: { contains: query } },
         { student: { is: { name: { contains: query } } } },
         { student: { is: { email: { contains: query } } } },
-        { items: { some: { university: { is: { name: { contains: query } } } } },
+        { items: { some: { university: { is: { name: { contains: query } } } } } },
       ],
     } : {}),
   };
