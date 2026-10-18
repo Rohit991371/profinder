@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseAdminPagination } from "@/lib/admin-pagination";
 
 const REQUEST_STATUSES = [
   "draft",
@@ -14,9 +15,6 @@ const REQUEST_STATUSES = [
   "completed",
   "cancelled",
 ] as const;
-
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 100;
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -39,12 +37,7 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const params = req.nextUrl.searchParams;
-  const requestedPage = Number.parseInt(params.get("page") || "1", 10);
-  const requestedPageSize = Number.parseInt(params.get("pageSize") || String(DEFAULT_PAGE_SIZE), 10);
-  const page = Number.isFinite(requestedPage) ? Math.max(1, requestedPage) : 1;
-  const pageSize = Number.isFinite(requestedPageSize)
-    ? Math.min(MAX_PAGE_SIZE, Math.max(1, requestedPageSize))
-    : DEFAULT_PAGE_SIZE;
+  const { page, pageSize } = parseAdminPagination(params);
   const statusParam = (params.get("status") || "").trim();
   const query = (params.get("q") || "").trim().slice(0, 120);
 
