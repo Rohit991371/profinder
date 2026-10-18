@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import AdminReview from "@/components/AdminReview";
+import AdminAcademicRecords from "@/components/AdminAcademicRecords";
 import AdminApplyRequests from "@/components/AdminApplyRequests";
 import AdminUserManagement from "@/components/AdminUserManagement";
 import AdminPayments from "@/components/AdminPayments";
@@ -527,6 +528,7 @@ export default async function AdminPage({
         </ul>
 
         <AdminReview />
+        <AdminAcademicRecords />
       </section>
 
       <AdminAnalytics />
