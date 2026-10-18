@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
     ...(query ? {
       OR: [
         { id: { contains: query } },
-        { student: { name: { contains: query } } },
-        { student: { email: { contains: query } } },
-        { items: { some: { university: { name: { contains: query } } } } },
+        { student: { is: { name: { contains: query } } } },
+        { student: { is: { email: { contains: query } } } },
+        { items: { some: { university: { is: { name: { contains: query } } } } },
       ],
     } : {}),
   };
