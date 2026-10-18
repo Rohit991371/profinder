@@ -1,0 +1,25 @@
+# secrets and local state
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# generated / local-only
+.scratch/
+output/
+state/
+logs/
+*.log
+
+# user-supplied input files (MOE list, saved HTML, ...) stay local
+inputs/*
+!inputs/.gitkeep
+!inputs/README.md
+
+docs/
+
+PLAN.md
+INSTRUCTIONS.MD
