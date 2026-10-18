@@ -15,7 +15,7 @@
     "db:studio": "prisma studio",
     "seed:taxonomy": "tsx prisma/seed-taxonomy.ts",
     "import:universities": "tsx scripts/import-pipeline.ts",
-    "test": "tsx --test src/lib/matching.test.ts src/lib/matching/engine.test.ts src/lib/billing/access.test.ts src/lib/admin-pagination.test.ts src/lib/apply-approval.test.ts scripts/recover-sqlite-to-postgres.test.ts",
+    "test": "tsx --test src/lib/matching.test.ts src/lib/matching/engine.test.ts src/lib/billing/access.test.ts src/lib/admin-pagination.test.ts src/lib/apply-approval.test.ts scripts/recover-sqlite-to-postgres.test.ts src/lib/apply-storage.test.ts",
     "import:official": "tsx scripts/import-official-programs.ts",
     "audit:professors": "tsx scripts/audit-professor-duplicates.ts",
     "recover:preflight": "tsx scripts/recover-sqlite-to-postgres.ts --preflight",
