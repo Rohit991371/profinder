@@ -7,7 +7,6 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const callbackUrl = "/tracker";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,9 +18,17 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    // Preserve internal destinations (such as /admin) without allowing external redirects.
+    const requestedCallback = new URLSearchParams(window.location.search).get("callbackUrl");
+    const callbackUrl =
+      requestedCallback?.startsWith("/") && !requestedCallback.startsWith("//")
+        ? requestedCallback
+        : "/tracker";
+
     const res = await signIn("credentials", {
       email,
       password,
+      callbackUrl,
       redirect: false,
     });
 
