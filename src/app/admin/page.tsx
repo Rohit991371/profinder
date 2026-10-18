@@ -114,8 +114,22 @@ export default async function AdminPage({
   if (!admin) {
     return (
       <div className="page-container py-16">
-        <h1 className="section-title">Admin only</h1>
-        <p className="mt-2 text-gray-600">This account cannot view data operations.</p>
+        <div className="mx-auto max-w-xl rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="section-title">Admin access required</h1>
+          <p className="mt-3 text-gray-600">
+            You are signed in, but this account is not authorized to manage ProFinderNow.
+            Sign in with your authorized admin account to continue.
+          </p>
+          <a
+            href="/login?callbackUrl=%2Fadmin"
+            className="btn-primary mt-6 inline-flex items-center justify-center"
+          >
+            Sign in to Admin
+          </a>
+          <p className="mt-3 text-sm text-gray-500">
+            Your admin access is controlled by the account role and server configuration.
+          </p>
+        </div>
       </div>
     );
   }
