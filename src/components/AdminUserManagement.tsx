@@ -35,7 +35,7 @@ export default function AdminUserManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, appliedQuery, pagination.pageSize]);
 
   useEffect(() => { void load(); }, [load]);
 
