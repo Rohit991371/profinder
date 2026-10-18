@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseAdminPagination } from "@/lib/admin-pagination";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -12,15 +13,34 @@ async function requireAdmin() {
   return student && (student.role === "admin" || configured) ? student : null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const users = await prisma.student.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: { id: true, name: true, email: true, role: true, plan: true, createdAt: true, subscription: { select: { status: true } } },
+  const params = req.nextUrl.searchParams;
+  const { page, pageSize } = parseAdminPagination(params);
+  const query = (params.get("q") || "").trim().slice(0, 120);
+  const where = query ? {
+    OR: [
+      { name: { contains: query } },
+      { email: { contains: query } },
+      { role: { contains: query } },
+      { plan: { contains: query } },
+    ],
+  } : undefined;
+  const [totalCount, users] = await Promise.all([
+    prisma.student.count({ where }),
+    prisma.student.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: { id: true, name: true, email: true, role: true, plan: true, createdAt: true, subscription: { select: { status: true } } },
+    }),
+  ]);
+  return NextResponse.json({
+    users,
+    pagination: { page, pageSize, totalCount, totalPages: Math.max(1, Math.ceil(totalCount / pageSize)) },
   });
-  return NextResponse.json({ users });
 }
 
 export async function PATCH(req: NextRequest) {
