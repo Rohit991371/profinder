@@ -130,9 +130,20 @@ export async function PATCH(req: NextRequest) {
 
   const existing = await prisma.applyRequest.findUnique({
     where: { id },
-    select: { id: true, status: true, paymentStatus: true },
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      items: { select: { status: true } },
+    },
   });
   if (!existing) return NextResponse.json({ error: "Apply for Me request not found." }, { status: 404 });
+  if (status === "submitted" && existing.status !== "submitted" &&
+      (existing.items.length === 0 || existing.items.some((item) => item.status !== "approved"))) {
+    return NextResponse.json({
+      error: "A request cannot be marked submitted until the student has approved every application.",
+    }, { status: 409 });
+  }
   if (status === "completed" && existing.paymentStatus !== "paid") {
     return NextResponse.json({ error: "An unpaid request cannot be marked completed." }, { status: 409 });
   }
