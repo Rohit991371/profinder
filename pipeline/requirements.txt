@@ -1,8 +1,12 @@
-httpx>=0.27,<1
+# Exact pins (==) = versions seen on the project machine (global Python, 2026-10-19).
+# Ranges = packages whose installed version in the venv was not seen; Entry 03 asks you to run
+#   pip freeze > requirements.lock     (inside the venv) and commit requirements.lock to freeze everything.
+httpx==0.28.1
+pydantic==2.13.4
+PyYAML==6.0.3
+pytest==9.1.1
 beautifulsoup4>=4.12,<5
 lxml>=5.0,<7
-pydantic>=2.7,<3
 pypinyin>=0.51,<1
 python-dotenv>=1.0,<2
 psycopg[binary]>=3.1,<4
-pytest>=8.0,<10

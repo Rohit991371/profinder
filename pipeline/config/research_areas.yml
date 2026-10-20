@@ -1,0 +1,27 @@
+# The 24 ResearchArea names in the app (src/lib/taxonomy.ts / ResearchArea table). The ONLY areas the classifier may assign.
+# A test keeps this list identical to schemas/enums.py RESEARCH_AREAS.
+areas:
+  - AI Security
+  - Algorithms
+  - Artificial Intelligence
+  - Blockchain Security
+  - Cloud Security
+  - Computer Networks
+  - Computer Science
+  - Computer Vision
+  - Cryptography
+  - Cybersecurity
+  - Data Science
+  - Databases
+  - Deep Learning
+  - Digital Forensics
+  - Distributed Systems
+  - Generative AI
+  - Human-Computer Interaction
+  - Machine Learning
+  - Natural Language Processing
+  - Network Security
+  - Operating Systems
+  - Privacy
+  - Robotics
+  - Software Engineering
