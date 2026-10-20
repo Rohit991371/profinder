@@ -1,0 +1,946 @@
+# Seed list of the 104 target universities (task 2.1).
+# name      = exactly as in data/ingest-targets.json (typos like 'ElectricPower' are kept on purpose; matching ignores spaces).
+# nameZh    = SEED HINT written by hand and validated against the MOE list (exact match, once). It is not a registry fact until
+#             `registry build` confirms it (MOE exact match + province agreement with another source).
+# domains / extra_domains = hand-added hosts or registrable domains (merged with registry-derived domains).
+# extra_email_domains     = email domains accepted besides the university's own (e.g. CERNET for Tsinghua).
+# seed_urls               = optional manual starting URLs for discovery (task 2.5).
+universities:
+    - name: Peking University
+      nameZh: 北京大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Renmin University of China
+      nameZh: 中国人民大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tsinghua University
+      nameZh: 清华大学
+      domains:
+          - cs.tsinghua.edu.cn
+      extra_domains: []
+      extra_email_domains:
+          - cernet.edu.cn
+      seed_urls:
+          faculty_list:
+              - https://www.cs.tsinghua.edu.cn/szzk/jzgml.htm
+    - name: Beijing Jiaotong University
+      nameZh: 北京交通大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing University of Technology
+      nameZh: 北京工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beihang University
+      nameZh: 北京航空航天大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing Institute of Technology
+      nameZh: 北京理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: University of Science and Technology Beijing
+      nameZh: 北京科技大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing University of Chemical Technology
+      nameZh: 北京化工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing Technology and Business University
+      nameZh: 北京工商大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing University of Posts and Telecommunications
+      nameZh: 北京邮电大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China Agricultural University
+      nameZh: 中国农业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing Forestry University
+      nameZh: 北京林业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing University of Chinese Medicine
+      nameZh: 北京中医药大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing Normal University
+      nameZh: 北京师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Capital Normal University
+      nameZh: 首都师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing International Studies University
+      nameZh: 北京第二外国语学院
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Beijing Language and Culture University
+      nameZh: 北京语言大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Communication University of China
+      nameZh: 中国传媒大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Central University of Finance and Economics
+      nameZh: 中央财经大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: University of International Business and Economics
+      nameZh: 对外经济贸易大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Minzu University of China
+      nameZh: 中央民族大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China University of Political Science and Law
+      nameZh: 中国政法大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: North China ElectricPower University
+      nameZh: 华北电力大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nankai University
+      nameZh: 南开大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tianjin University
+      nameZh: 天津大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tianjin University of Science and Technology
+      nameZh: 天津科技大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tiangong University
+      nameZh: 天津工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tianjin Medical University
+      nameZh: 天津医科大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tianjin Normal University
+      nameZh: 天津师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Hebei University of Technology
+      nameZh: 河北工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanxi University
+      nameZh: 山西大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Taiyuan University of Technology
+      nameZh: 太原理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Inner Mongolia University
+      nameZh: 内蒙古大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Liaoning University
+      nameZh: 辽宁大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Dalian University of Technology
+      nameZh: 大连理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shenyang Aerospace University
+      nameZh: 沈阳航空航天大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Northeastern University
+      nameZh: 东北大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Dalian Maritime University
+      nameZh: 大连海事大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China Medical University
+      nameZh: 中国医科大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Jilin University
+      nameZh: 吉林大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Yanbian University
+      nameZh: 延边大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Changchun University of Science and Technology
+      nameZh: 长春理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Northeast Normal University
+      nameZh: 东北师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Harbin Institute of Technology
+      nameZh: 哈尔滨工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Harbin University of Science and Technology
+      nameZh: 哈尔滨理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Harbin Engineering University
+      nameZh: 哈尔滨工程大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Northeast Agricultural University
+      nameZh: 东北农业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Northeast Forestry University
+      nameZh: 东北林业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Fudan University
+      nameZh: 复旦大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Tongji University
+      nameZh: 同济大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanghai Jiao Tong University
+      nameZh: 上海交通大学
+      domains:
+          - cs.sjtu.edu.cn
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list:
+              - https://www.cs.sjtu.edu.cn/jiaoshiml.html
+    - name: East China University of Science and Technology
+      nameZh: 华东理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: University of Shanghai for Science and Technology
+      nameZh: 上海理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanghai Maritime University
+      nameZh: 上海海事大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Donghua University
+      nameZh: 东华大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: East China Normal University
+      nameZh: 华东师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanghai International Studies University
+      nameZh: 上海外国语大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanghai University of Finance and Economics
+      nameZh: 上海财经大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shanghai University
+      nameZh: 上海大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing University
+      nameZh: 南京大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Soochow University
+      nameZh: 苏州大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Southeast University
+      nameZh: 东南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing University of Aeronautics and Astronautics
+      nameZh: 南京航空航天大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing University of Scienceand Technology
+      nameZh: 南京理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Hohai University
+      nameZh: 河海大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Jiangnan University
+      nameZh: 江南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Jiangsu University
+      nameZh: 江苏大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing University of Information Science and Technology
+      nameZh: 南京信息工程大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing Agricultural University
+      nameZh: 南京农业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China Pharmaceutical University
+      nameZh: 中国药科大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanjing Normal University
+      nameZh: 南京师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Zhejiang University
+      nameZh: 浙江大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Zhejiang University of Technology
+      nameZh: 浙江工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Zhejiang Normal University
+      nameZh: 浙江师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Anhui University
+      nameZh: 安徽大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: University of Science and Technology of China
+      nameZh: 中国科学技术大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Hefei University of Technology
+      nameZh: 合肥工业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Xiamen University
+      nameZh: 厦门大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Fuzhou University
+      nameZh: 福州大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Nanchang University
+      nameZh: 南昌大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Shandong University
+      nameZh: 山东大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Ocean University of China
+      nameZh: 中国海洋大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China University of Petroleum (East China)
+      nameZh: 中国石油大学（华东）
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Wuhan University
+      nameZh: 武汉大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Huazhong University of Science and Technology
+      nameZh: 华中科技大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: China University of Geosciences (Wuhan)
+      nameZh: 中国地质大学（武汉）
+      domains:
+          - cug.edu.cn
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Wuhan University of Technology
+      nameZh: 武汉理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Huazhong Agricultural University
+      nameZh: 华中农业大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Central China Normal University
+      nameZh: 华中师范大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Hunan University
+      nameZh: 湖南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Central South University
+      nameZh: 中南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Sun Yat-sen University
+      nameZh: 中山大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: South China University of Technology
+      nameZh: 华南理工大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Sichuan University
+      nameZh: 四川大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Chongqing University
+      nameZh: 重庆大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Southwest Jiaotong University
+      nameZh: 西南交通大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: University of Electronic Science and Technology of China
+      nameZh: 电子科技大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Southwest University
+      nameZh: 西南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Xi'an Jiaotong University
+      nameZh: 西安交通大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Xidian University
+      nameZh: 西安电子科技大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Lanzhou University
+      nameZh: 兰州大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Yunnan University
+      nameZh: 云南大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []
+    - name: Zhengzhou University
+      nameZh: 郑州大学
+      domains: []
+      extra_domains: []
+      extra_email_domains: []
+      seed_urls:
+          faculty_list: []
+          admissions: []
+          scholarship: []

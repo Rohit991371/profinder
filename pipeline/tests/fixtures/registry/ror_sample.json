@@ -1,0 +1,9 @@
+{"_note":"SYNTHETIC fixture shaped after the ROR v2 /organizations response; replace with the real cached response from `registry probe`.",
+ "number_of_results":2,
+ "items":[
+  {"id":"https://ror.org/03cve4549","names":[{"value":"Tsinghua University","lang":"en","types":["ror_display","label"]},{"value":"清华大学","lang":"zh","types":["label"]},{"value":"THU","lang":null,"types":["acronym"]}],
+   "links":[{"type":"website","value":"https://www.tsinghua.edu.cn/"}],
+   "locations":[{"geonames_id":1816670,"geonames_details":{"name":"Beijing","country_code":"CN","country_name":"China"}}]},
+  {"id":"https://ror.org/00000zzz1","names":[{"value":"Tsinghua University Press","lang":"en","types":["ror_display","label"]}],
+   "links":[],"locations":[{"geonames_id":1816670,"geonames_details":{"name":"Beijing","country_code":"CN"}}]}
+ ]}

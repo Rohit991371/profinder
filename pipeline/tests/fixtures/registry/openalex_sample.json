@@ -1,0 +1,7 @@
+{"_note":"SYNTHETIC fixture shaped after the OpenAlex /institutions response; replace with the real cached response from `registry probe`.",
+ "meta":{"count":3},
+ "results":[
+  {"id":"https://openalex.org/I99999001","display_name":"Tsinghua University","display_name_alternatives":["清华大学","THU"],"ror":"https://ror.org/03cve4549","country_code":"CN","homepage_url":"https://www.tsinghua.edu.cn/","geo":{"city":"Beijing","region":"Beijing","country_code":"CN"}},
+  {"id":"https://openalex.org/I99999002","display_name":"Tsinghua University Press","display_name_alternatives":[],"ror":null,"country_code":"CN","homepage_url":"http://www.tup.tsinghua.edu.cn/","geo":{"city":"Beijing","region":"Beijing","country_code":"CN"}},
+  {"id":"https://openalex.org/I99999003","display_name":"Tsinghua University","display_name_alternatives":[],"ror":null,"country_code":"US","homepage_url":null,"geo":{"city":"Austin","region":"Texas","country_code":"US"}}
+ ]}
