@@ -15,7 +15,7 @@ COLUMNS = [
 ]
 
 
-def to_row(m: Merged) -> dict:
+def to_row(m: Merged, targets: dict[str, str] | None = None) -> dict:
     return {
         "name": m.name, "status": m.status, "matched_sources": "+".join(m.sources), "n_sources": len(m.sources),
         "nameZh": m.name_zh or "", "nameZh_source": m.name_zh_source or "", "moe_code": m.moe_code or "",
@@ -28,18 +28,18 @@ def to_row(m: Merged) -> dict:
         "agency_equals_moe_code": ("" if not (m.existing_agency_number and m.moe_code) else str(m.existing_agency_number == m.moe_code).lower()),
         "openAlexId_proposed": m.openalex_id or "", "openAlexId_existing": m.existing_openalex_id or "",
         "ror_id": m.ror_id or "", "campuschina_key": m.campuschina_key or "", "existing_id": m.existing_id or "",
-        "flags": ";".join(m.flags), "targets_found": "n/a (task 2.5)",
+        "flags": ";".join(m.flags), "targets_found": (targets or {}).get(m.name, "not_run"),
     }
 
 
-def write_report(merged: list[Merged], out_dir: Path) -> tuple[Path, Path]:
+def write_report(merged: list[Merged], out_dir: Path, targets: dict[str, str] | None = None) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_p, json_p = out_dir / "registry_report.csv", out_dir / "universities_merged.json"
     with csv_p.open("w", encoding="utf-8-sig", newline="") as f:   # BOM so Excel shows Chinese correctly
         w = csv.DictWriter(f, fieldnames=COLUMNS)
         w.writeheader()
         for m in merged:
-            w.writerow(to_row(m))
+            w.writerow(to_row(m, targets))
     json_p.write_text(json.dumps([asdict(m) for m in merged], ensure_ascii=False, indent=1), encoding="utf-8")
     return csv_p, json_p
 
