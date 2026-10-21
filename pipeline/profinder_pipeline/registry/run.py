@@ -173,7 +173,9 @@ def cmd_diagnose(args) -> int:
 def cmd_build(args) -> int:
     seeds = load_seed(SEED)
     merged = _merge(args, seeds, load_checks(CACHE / "url_checks.json"))
-    csv_p, json_p = write_report(merged, OUT)
+    ts = PIPELINE_ROOT / "output" / "discovery" / "targets_summary.json"
+    targets = json.loads(ts.read_text(encoding="utf-8")) if ts.is_file() else None
+    csv_p, json_p = write_report(merged, OUT, targets)
     doms = build_domains(merged, seeds)
     dom_p = PIPELINE_ROOT / "config" / "domains.yml" if args.write_domains else OUT / "domains.yml"
     dump_domains(doms, dom_p)
