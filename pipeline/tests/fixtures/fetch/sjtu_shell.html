@@ -1,0 +1,3 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>教师名录 - 计算机学院</title></head><body><div class="g-nav"><ul><li><a href="https://www.cs.sjtu.edu.cn/szdw.html" title="Faculty">师资队伍</a></li>
+<li><a href="https://www.cs.sjtu.edu.cn/jiaoshiml.html">教师名录</a></li></ul></div><div class="ny-cont"><div class="ny-left"><div class="ny-list"><li><h2><a href="https://www.cs.sjtu.edu.cn/lyys.html">院士学者</a></h2></li></div></div><div class="ny-right"><div class="rc-list"></div></div></div><script>var global_type=1;function ajax_page(page){$.ajax({url:'https://www.cs.sjtu.edu.cn/active/ajax_teacher_list.html',type:'POST',dataType:'JSON',
+success:function(data){$('.rc-list').html(data.content);}});}$(function(){ajax_page();})</script></body></html>
