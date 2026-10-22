@@ -1,0 +1,14 @@
+# Per-site fetch hints (task 3.2). Rules match host + path prefix; first match wins.
+#   render: always | auto | never      always = go straight to the browser (JavaScript-built page)
+#   wait_selector: CSS selector that must exist before the rendered HTML is taken
+# 'auto' = plain HTTP first; the browser is used when the site refuses the plain client (403/412/202/challenge)
+# or when a faculty list page looks like an empty JavaScript shell.
+defaults:
+  render: auto
+rules:
+  # Trial B: the teacher directory is filled by an AJAX call; the profile pages (/jiaoshiml/<name>.html) are static.
+  - host: www.cs.sjtu.edu.cn
+    path_prefix: /jiaoshiml.html
+    render: always
+    wait_selector: ".rc-list .rc-item"
+    settle_ms: 1500

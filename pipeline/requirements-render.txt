@@ -1,0 +1,3 @@
+# Browser fallback for JavaScript pages and sites that refuse the plain HTTP client (Iteration 3).
+# Version range, not a pin: after installing run `pip freeze > requirements.lock` (and add the exact version to requirements.txt).
+playwright>=1.48,<2

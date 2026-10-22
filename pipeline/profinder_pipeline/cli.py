@@ -30,6 +30,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("registry", help="registry stage (MOE/ROR/OpenAlex/CampusChina): `registry --help` lists its commands", add_help=False)
     sub.add_parser("discover", help="discovery stage (faculty_list/admissions/scholarship targets): `discover --help`", add_help=False)
+    sub.add_parser("fetch", help="fetch stage (gate, static + browser fetch, cache, faculty planner): `fetch --help`", add_help=False)
 
     t = sub.add_parser("trial-tsinghua", help="Trial A: the Iteration 0 spike on the real schemas")
     tsub = t.add_subparsers(dest="trial_command", metavar="<step>")
@@ -69,7 +70,7 @@ def _init_db() -> int:
 
 
 def _passthrough(argv: list[str]):
-    """`registry ...` and `discover ...` own their arguments (their own argparse), so hand them over before the main parser runs."""
+    """`registry ...`, `discover ...` and `fetch ...` own their arguments (their own argparse), so hand them over before the main parser runs."""
     level, i = "INFO", 0
     while i < len(argv) and argv[i].startswith("-"):
         if argv[i] == "--log-level" and i + 1 < len(argv):
@@ -78,7 +79,7 @@ def _passthrough(argv: list[str]):
             level, i = argv[i].split("=", 1)[1], i + 1
         else:
             return None
-    if i < len(argv) and argv[i] in ("registry", "discover"):
+    if i < len(argv) and argv[i] in ("registry", "discover", "fetch"):
         return argv[i], argv[i + 1:], level
     return None
 
@@ -92,6 +93,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         if cmd == "registry":
             from .registry.run import main as registry_main
             return registry_main(rest)
+        if cmd == "fetch":
+            from .fetch.run import main as fetch_main
+            return fetch_main(rest)
         from .discovery.run import main as discover_main
         return discover_main(rest)
     parser = _build_parser()
