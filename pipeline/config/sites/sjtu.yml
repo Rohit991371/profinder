@@ -1,0 +1,33 @@
+# Site config for the SJTU CS faculty directory (trial B). The list is JavaScript-rendered (cached DOM is the rendered page).
+# The list has names and links only; position and email come from each profile page => profile is required.
+university: Shanghai Jiao Tong University
+list_url: https://www.cs.sjtu.edu.cn/jiaoshiml.html
+school_en: School of Computer Science   # page title: 上海交通大学计算机学院（网络空间安全学院、密码学院）
+school_zh: 计算机学院
+render: playwright
+personal_url_patterns:
+  - '^https://www\.cs\.sjtu\.edu\.cn/jiaoshiml/[A-Za-z0-9_\-]+\.html$'
+list:
+  item: ".rc-item .dt a[href], .rc-item .name-list a[href]"
+  item_href_pattern: '/jiaoshiml/[A-Za-z0-9_\-]+\.html'   # menu links (e.g. txjiaoshi.html) are not people
+  min_items: 200
+  fields:
+    name:          {css: ":scope"}
+    profile_href:  {css: ":scope", attr: href}
+    department:    {closest: ".rc-item", css: ".tit .name"}
+profile:
+  required: true
+  fields:
+    name:             {css: ".js-info .name"}
+    position:         {css: ".js-info .zw"}
+    emails:           {emails: true, css: ".js-info"}
+    department:       {label: '所在研究所[：:]\s*(.+)', css: ".js-info .dt"}
+    personal_website: {labelled_link: "个人主页", css: ".js-info .dt"}
+    interests:
+      section_items:
+        item: ".js-dt .item"
+        title: ".name"
+        body: ".txt"
+        titles: ["研究方向", "研究领域", "研究兴趣"]
+  # Used only with --llm and only when no research-interest section exists (most pages): the bio item.
+  llm_interests_css: ".js-dt .item .txt"

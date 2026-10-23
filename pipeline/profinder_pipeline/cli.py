@@ -31,6 +31,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("registry", help="registry stage (MOE/ROR/OpenAlex/CampusChina): `registry --help` lists its commands", add_help=False)
     sub.add_parser("discover", help="discovery stage (faculty_list/admissions/scholarship targets): `discover --help`", add_help=False)
     sub.add_parser("fetch", help="fetch stage (gate, static + browser fetch, cache, faculty planner): `fetch --help`", add_help=False)
+    sub.add_parser("extract", help="extraction & validation (site configs, CSS, Groq fallback, candidates): `extract --help`", add_help=False)
 
     t = sub.add_parser("trial-tsinghua", help="Trial A: the Iteration 0 spike on the real schemas")
     tsub = t.add_subparsers(dest="trial_command", metavar="<step>")
@@ -79,7 +80,7 @@ def _passthrough(argv: list[str]):
             level, i = argv[i].split("=", 1)[1], i + 1
         else:
             return None
-    if i < len(argv) and argv[i] in ("registry", "discover", "fetch"):
+    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract"):
         return argv[i], argv[i + 1:], level
     return None
 
@@ -96,6 +97,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         if cmd == "fetch":
             from .fetch.run import main as fetch_main
             return fetch_main(rest)
+        if cmd == "extract":
+            from .extract.run import main as extract_main
+            return extract_main(rest)
         from .discovery.run import main as discover_main
         return discover_main(rest)
     parser = _build_parser()
@@ -143,3 +147,4 @@ def main(argv: Optional[list[str]] = None) -> int:
         parser.parse_args(["trial-tsinghua", "--help"])
     parser.print_help()
     return 0
+    
