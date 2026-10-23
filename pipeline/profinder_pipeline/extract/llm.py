@@ -16,6 +16,7 @@ LLM_LOG = OUTPUT_DIR / "extract" / "llm_calls.jsonl"
 LLM_CACHE_DIR = INPUTS_DIR / "cache" / "llm"
 INTERESTS_PROMPT_VERSION = "interests-v1"
 PEOPLE_PROMPT_VERSION = "people-v1"
+PROGRAMS_PROMPT_VERSION = "programs-v1"
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -34,6 +35,44 @@ class LlmPerson(BaseModel):
     email: Optional[str]
     profile_url: Optional[str]
     department: Optional[str]
+
+
+class SelectorProposal(BaseModel):
+    """What `site-learn` asks Groq for: CSS selectors only (a human reviews them; they are validated by running them)."""
+    model_config = ConfigDict(extra="forbid")
+    item_css: str
+    name_css: Optional[str]
+    link_css: Optional[str]
+    position_css: Optional[str]
+    position_label_regex: Optional[str]
+    department_previous_css: Optional[str]
+
+
+class LlmProgram(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    degree: Optional[str]
+    major: Optional[str]
+    official_name: Optional[str]
+    teaching_language: Optional[str]
+    deadline_text: Optional[str]
+    tuition_text: Optional[str]
+    application_fee_text: Optional[str]
+    evidence_quote: Optional[str]
+
+
+class LlmScholarship(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: Optional[str]
+    type_hint: Optional[str]
+    coverage_text: Optional[str]
+    deadline_text: Optional[str]
+    evidence_quote: Optional[str]
+
+
+class ProgramsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    programs: list[LlmProgram]
+    scholarships: list[LlmScholarship]
 
 
 class PeopleOut(BaseModel):
@@ -154,3 +193,38 @@ def people_from_markdown(client: GroqClient, markdown: str, ref: str, chunk_char
             _cache_write(path, cached)
         people.extend(LlmPerson.model_validate(p) for p in cached.get("people", []))
     return people, failed
+
+
+# ------------------------------------------------------------------------------------------------ programs / scholarships (4.6)
+PROGRAMS_SYSTEM = (
+    "You extract admissions information for INTERNATIONAL students from a Chinese university web page. Reply with JSON only: "
+    "{\"programs\": [...], \"scholarships\": [...]}. Include only programmes (a degree + a major) and scholarships that are explicitly "
+    "named in the text; never invent, guess or infer. Copy every value exactly as written (keep the original language). "
+    "programs[].degree: Master or PhD (the page may say 硕士 or 博士); null for bachelor or unclear. programs[].major: the subject/major exactly as written. "
+    "official_name: the programme's own name if given. teaching_language: the wording on the page about the language of instruction, or null. "
+    "deadline_text, tuition_text, application_fee_text: copy the sentence fragment exactly as written including any year; do not convert or compute; null if absent. "
+    "evidence_quote: one exact quote of at most 200 characters from the text that contains the major (programs) or the name (scholarships). "
+    "scholarships[].name: the scholarship name as written; type_hint: the words that say whether it is a Chinese Government (CSC), university or presidential scholarship, or null; "
+    "coverage_text: the words about what it covers (full/partial tuition, stipend), or null."
+)
+
+
+def programs_from_markdown(client: GroqClient, markdown: str, ref: str, chunk_chars: int = 3500, max_chunks: int = 4) -> tuple[ProgramsOut, int, int]:
+    """-> (merged programs/scholarships, failed chunks, chunks used). The caller grounds everything against the page text."""
+    merged = ProgramsOut(programs=[], scholarships=[])
+    failed = 0
+    chunks = chunk_by_items(markdown, chunk_chars)[:max_chunks]
+    for i, chunk in enumerate(chunks):
+        path = _cache_path("programs", PROGRAMS_PROMPT_VERSION, client.model, chunk)
+        cached = _cache_read(path)
+        if cached is None:
+            try:
+                out = ask_model(client, ProgramsOut, PROGRAMS_SYSTEM, f"Page text:\n{chunk}", "programs", f"{ref}#chunk{i}", max_tokens=2500)
+            except (LlmError, ValueError, ValidationError):
+                failed += 1
+                continue
+            cached = out.model_dump()
+            _cache_write(path, cached)
+        merged.programs.extend(LlmProgram.model_validate(p) for p in cached.get("programs", []))
+        merged.scholarships.extend(LlmScholarship.model_validate(p) for p in cached.get("scholarships", []))
+    return merged, failed, len(chunks)

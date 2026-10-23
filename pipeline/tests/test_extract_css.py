@@ -77,3 +77,38 @@ def test_section_lines_empty_marker_heading():
     s = soup_of("<div class='c'><h4></h4><p>研究领域</p><p>A方向</p><p>B方向</p><h4></h4><p>其他</p><p>x</p></div>")
     assert section_lines(s, ".c", "h4", ["研究领域"]) == ["A方向", "B方向"]
     assert section_lines(s, ".c", "h4", ["研究方向"]) is None
+
+
+def test_ecnu_faculty_profile_template():
+    c = cfg(ECNU)
+    a = parse_profile(html("ecnu_profile_xu_ming.html"), c, "https://faculty.ecnu.edu.cn/x")
+    assert a.name == "徐鸣" and a.position == "副教授 (科研型) /博士生导师" and a.department == "密码学院"
+    assert a.emails == ["mxu@cs.ecnu.edu.cn"] and a.interests_lines == ["基础算法及其应用"]        # label '目前研究方向：' removed
+    b = parse_profile(html("ecnu_profile_wang_ting.html"), c, "https://faculty.ecnu.edu.cn/x")
+    assert b.department == "软件工程学院" and b.emails == ["twang@sei.ecnu.edu.cn"]
+    assert b.personal_website == "https://tingwang1122.github.io/index.html"
+    assert b.interests_lines[0].startswith("Intelligent Computing and Networking") and len(b.interests_lines) <= 8
+
+
+def test_heading_census_explains_missing_interests():
+    from profinder_pipeline.extract.css import census_headings
+    titles, ok = census_headings(html("tsinghua_profile_li_guoliang.html"), cfg(TSINGHUA))
+    assert ok and "研究领域" in titles
+    titles2, ok2 = census_headings(html("sjtu_profile_chen_rong.html"), cfg(SJTU))
+    assert not ok2 and "个人简介" in titles2                     # SJTU pages have no interests section
+
+
+def test_llm_source_text_from_a_named_section():
+    from profinder_pipeline.extract.css import llm_bio_text
+    page = ("<div class='v_news_content'><h4></h4><p>研究概况</p><p>主要从事数据库与大数据管理研究。</p><p>讲授课程</p><p>数据库原理</p>"
+            "<h4></h4><p>教育背景</p><p>博士</p></div>")
+    assert llm_bio_text(page, cfg(TSINGHUA)) == "主要从事数据库与大数据管理研究。"        # stops at the next title, 讲授课程 is not included
+    assert llm_bio_text("<div class='v_news_content'><p>nothing</p></div>", cfg(TSINGHUA)) is None
+    assert llm_bio_text(html("sjtu_profile_chen_rong.html"), cfg(SJTU)).startswith("陈榕")     # css-region variant unchanged
+
+
+def test_ecnu_accepts_both_interest_headings():
+    original = html("ecnu_profile_xu_ming.html")
+    assert '<span class="title"> 研究方向 </span>' in original
+    renamed = original.replace('<span class="title"> 研究方向 </span>', '<span class="title"> 研究领域 </span>')
+    assert parse_profile(renamed, cfg(ECNU), "https://faculty.ecnu.edu.cn/x").interests_lines == ["基础算法及其应用"]

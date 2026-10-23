@@ -37,7 +37,7 @@ def test_end_to_end_counts_and_outputs(tmp_path):
     rows = [json.loads(ln) for ln in (tmp_path / "out" / "tsinghua.jsonl").read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 135
     e = run_mod.extract_university(cfgs[ECNU], None, False, 0)
-    assert e["decisions"] == {"auto_accept": 62, "needs_review": 11, "rejected": 2}
+    assert e["decisions"] == {"auto_accept": 0, "needs_review": 73, "rejected": 2}      # no ECNU profile pages cached: school unknown
 
 
 def test_profile_required_site_waits_for_pages(tmp_path):

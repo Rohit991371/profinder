@@ -161,15 +161,27 @@ def section_lines(root: Tag, container: Optional[str], boundary: str, titles: li
     return None
 
 
-def section_items(root: Tag, item: str, title: str, body: str, titles: list[str]) -> Optional[list[str]]:
+def section_items(root: Tag, item: str, title: str, body: str, titles: list[str], line_css: Optional[str] = None,
+                  strip_prefix: Optional[str] = None, max_lines: int = 12) -> Optional[list[str]]:
+    """Items that have a title element and a body element (SJTU bio items, ECNU `div.post`). `line_css`: one line per matching
+    element inside the body (default: one line per text node); `strip_prefix`: regex removed from the start of each line
+    (e.g. the label '目前研究方向：')."""
     wanted = {re.sub(r"[：:\s]", "", t) for t in titles}
     for it in root.select(item):
         t = it.select_one(title)
         if t is not None and re.sub(r"[：:\s]", "", _el_text(t)) in wanted:
             b = it.select_one(body)
-            lines = _lines(b) if b is not None else []
+            if b is None:
+                continue
+            raw = [clean_ws(e.get_text("", strip=True)) for e in b.select(line_css)] if line_css else _lines(b)
+            lines = []
+            for ln in raw:
+                if strip_prefix:
+                    ln = clean_ws(re.sub(strip_prefix, "", ln))
+                if ln:
+                    lines.append(ln)
             if lines:
-                return lines
+                return lines[:max_lines]
     return None
 
 
@@ -220,7 +232,8 @@ def extract_field(node: Tag, spec: dict[str, Any], base_url: str) -> Any:
         return section_lines(scope, s.get("container"), s["boundary"], s["titles"], s.get("stop_titles"), int(s.get("max_lines", 12)))
     if "section_items" in spec:
         s = spec["section_items"]
-        return section_items(scope, s["item"], s["title"], s["body"], s["titles"])
+        return section_items(scope, s["item"], s["title"], s["body"], s["titles"], s.get("line_css"), s.get("strip_prefix"),
+                             int(s.get("max_lines", 12)))
     if region is None:
         return None
     if "attr" in spec:
@@ -295,13 +308,40 @@ def parse_profile(html: str, cfg: SiteConfig, base_url: str) -> ProfileData:
 
 
 def llm_bio_text(html: str, cfg: SiteConfig, max_chars: int = 1500) -> Optional[str]:
-    """Text handed to Groq for interests when no interests section exists (config: profile.llm_interests_css)."""
-    css = cfg.profile_spec.get("llm_interests_css")
-    if not css:
-        return None
+    """Text handed to Groq for interests when the page has no interests section: either a CSS region (profile.llm_interests_css, SJTU bio)
+    or a named section (profile.llm_interests_section, Tsinghua 研究概况)."""
     soup = soup_of(html)
-    el = soup.select_one(css)
-    if el is None:
-        return None
-    text = "\n".join(_lines(el))
-    return text[:max_chars] or None
+    css = cfg.profile_spec.get("llm_interests_css")
+    if css:
+        el = soup.select_one(css)
+        text = "\n".join(_lines(el)) if el is not None else ""
+        return text[:max_chars] or None
+    sec = cfg.profile_spec.get("llm_interests_section")
+    if sec:
+        lines = section_lines(soup, sec.get("container"), sec["boundary"], sec["titles"], sec.get("stop_titles"), int(sec.get("max_lines", 6)))
+        return "\n".join(lines)[:max_chars] if lines else None
+    return None
+
+
+def census_headings(html: str, cfg: SiteConfig) -> tuple[list[str], bool]:
+    """(section titles found on a profile page, whether the interests spec yields lines). Diagnostic for `extract headings`."""
+    soup = soup_of(html)
+    spec = (cfg.profile_spec.get("fields") or {}).get("interests") or {}
+    titles: list[str] = []
+    if "section" in spec:
+        s = spec["section"]
+        cont = soup.select_one(s["container"]) if s.get("container") else soup
+        kids = [c for c in cont.children if isinstance(c, Tag)] if cont is not None else []
+        for i, k in enumerate(kids):
+            if sv.match(s["boundary"], k):
+                h = _el_text(k) or (_el_text(kids[i + 1]) if i + 1 < len(kids) else "")
+                if h:
+                    titles.append(re.sub(r"[：:\s]", "", h))
+    elif "section_items" in spec:
+        s = spec["section_items"]
+        for it in soup.select(s["item"]):
+            t = it.select_one(s["title"])
+            if t is not None and _el_text(t):
+                titles.append(re.sub(r"[：:\s]", "", _el_text(t)))
+    got = extract_field(soup, spec, "") if spec else None
+    return titles, bool(got)

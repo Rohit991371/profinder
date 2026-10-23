@@ -10,6 +10,8 @@ SURNAME_OVERRIDES = {
     "单": "Shan", "曾": "Zeng", "仇": "Qiu", "解": "Xie", "区": "Ou", "覃": "Qin", "查": "Zha", "乐": "Yue",
     "朴": "Piao", "缪": "Miao", "盖": "Ge", "种": "Chong", "员": "Yun", "折": "She", "洗": "Xian",
     "尉迟": "Yuchi", "单于": "Chanyu", "万俟": "Moqi", "长孙": "Zhangsun",
+    "翟": "Zhai", "祭": "Zhai", "宓": "Fu", "句": "Gou", "秘": "Bi", "繁": "Po", "隗": "Wei", "訾": "Zi", "郇": "Huan",
+    "阚": "Kan", "谌": "Chen", "召": "Shao", "莘": "Shen", "都": "Du", "薄": "Bo",
 }
 
 

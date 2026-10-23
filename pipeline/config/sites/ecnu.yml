@@ -1,9 +1,10 @@
-# Site config for the ECNU CS faculty list (trial C). Everything needed is on the list page; profile pages are not parsed yet
-# (no real ECNU profile page was available when this was written).
+# Site config for the ECNU CS faculty list (trial C). Name, position and email are on the list page. The list mixes several schools
+# (计算机科学与技术学院, 软件工程学院, 密码学院, ...), so the school comes from each person's own profile page (faculty.ecnu.edu.cn
+# template: `部门`), and research directions from its 研究方向 section. Checked against two real profile pages (2026-10-23).
 university: East China Normal University
 list_url: https://cs.ecnu.edu.cn/jzgml/list.htm
-school_en: School of Computer Science and Technology   # list page site: 计算机科学与技术学院
-school_zh: 计算机科学与技术学院
+school_en: null          # not used: department_is_school (see profile) - the list covers several schools
+school_zh: null
 render: static
 personal_url_patterns:
   - '^https://faculty\.ecnu\.edu\.cn/'
@@ -19,4 +20,19 @@ list:
     group:         {attr_of_item: "data-name"}
 profile:
   required: false
-  fields: {}
+  department_is_school: true
+  fields:
+    name:             {css: "h1.news_title"}
+    position:         {css: ".news_meta .tip2"}
+    department:       {css: ".news_meta .tip1", index: 1}
+    emails:           {emails: true, css: "div.post"}
+    personal_website: {labelled_link: "个人主页"}
+    interests:
+      section_items:
+        item: "div.post"
+        title: ".tt .title"
+        body: ".con"
+        line_css: "p"
+        strip_prefix: '^(目前)?研究方向\s*[：:]\s*'
+        titles: ["研究方向", "研究领域"]
+        max_lines: 8

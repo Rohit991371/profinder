@@ -32,3 +32,12 @@ profile:
         stop_titles: ["教育背景", "社会兼职", "研究概况", "研究课题", "讲授课程", "教学概况", "奖励与荣誉", "学术成果",
                       "代表性论文", "发表论文", "出版著作", "专利", "工作经历", "科研项目", "荣誉奖励", "学术兼职", "个人简历"]
         max_lines: 8
+  # Only with --llm: pages without a 研究领域 section but with a 研究概况 (research overview) section; Groq copies the interests phrase
+  # out of it and the phrase must be found in the page text.
+  llm_interests_section:
+    container: ".v_news_content"
+    boundary: "h4"
+    titles: ["研究概况"]
+    stop_titles: ["教育背景", "社会兼职", "研究领域", "研究课题", "讲授课程", "教学概况", "奖励与荣誉", "学术成果", "代表性论文", "发表论文", "出版著作",
+                  "专利", "工作经历", "科研项目", "荣誉奖励", "学术兼职", "个人简历"]
+    max_lines: 6
