@@ -33,16 +33,33 @@ def test_tsinghua_matches_the_spike_counts():
     assert all(b.role_class == "faculty" for b in verified)
 
 
-def test_ecnu_decisions_and_flags():
+def test_ecnu_without_profile_pages_waits_in_review_because_school_is_unknown():
     res = _run(ECNU, "ecnu_list.html")
-    assert Counter(d.value for _, (d, _s, _r) in res) == {"auto_accept": 62, "needs_review": 11, "rejected": 2}
+    # the ECNU list mixes several schools: without the person's own profile page the school is unknown (B4) -> never verified
+    assert Counter(d.value for _, (d, _s, _r) in res) == {"needs_review": 73, "rejected": 2}
     by = {b.name_zh: (b, d) for b, d in res}
     assert by["胡文心"][1][0] == Decision.rejected                                 # 教授级高级工程师 = engineer
     assert by["沈富可"][1][0] == Decision.rejected                                 # 教授级高工
     assert by["Edwin Sha"][1][0] == Decision.needs_review                          # not a Chinese-script name
-    assert by["施江鸣"][1][0] == Decision.needs_review                             # 晨晖学者: role unclear
-    assert by["钱鸿"][0].name_zh == "钱鸿" and by["钱鸿"][1][0] == Decision.needs_review   # （兼） concurrent post, spaces removed
+    assert by["钱鸿"][0].name_zh == "钱鸿"                                          # （兼） concurrent post, spaces removed
     assert by["宋思程"][0].email == "scsong@dase.ecnu.edu.cn"                       # sub-domain of ecnu.edu.cn is allowed
+    assert any(c.name == "B4_school_from_page" and not c.passed for c in by["宋思程"][0].checks)
+
+
+def test_ecnu_profile_page_supplies_school_and_interests():
+    from profinder_pipeline.extract.css import RawPerson, visible_text
+    ctx, _lp = make_context(ECNU, "ecnu_list.html")
+    c = cfg(ECNU)
+    h = html("ecnu_profile_xu_ming.html")
+    url = "https://faculty.ecnu.edu.cn/_s37/xm/main.psp"
+    raw = RawPerson(name_raw="徐鸣", profile_href=url, position_raw="副教授", emails=["mxu@cs.ecnu.edu.cn"])
+    prof = parse_profile(h, c, url)
+    pp = SourcePage(url, 200, NOW, visible_text(h))
+    b = evaluate_person(raw, prof, pp, ctx, romanise_fn=fake_romanise)
+    assert b.school == "密码学院" and b.department == "密码学院" and b.interests == "基础算法及其应用"
+    assert b.position_en == "Associate Professor" and b.email == "mxu@cs.ecnu.edu.cn" and b.areas == ["Algorithms"] or b.areas == []
+    assert b.profile_url == url and b.personal
+    assert decide(b.role_class, b.position_raw, b.checks)[0] == Decision.auto_accept
 
 
 def test_no_record_verified_when_a_blocking_check_fails():

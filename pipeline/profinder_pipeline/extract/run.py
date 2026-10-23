@@ -124,7 +124,7 @@ def extract_university(cfg: SiteConfig, conn: Any, use_llm: bool, llm_limit: int
             continue
         llm_text: Optional[str] = None
         if (use_llm and client is not None and profile is not None and profile_page is not None and not profile.interests_lines
-                and llm_used < llm_limit and cfg.profile_spec.get("llm_interests_css") and html):
+                and llm_used < llm_limit and (cfg.profile_spec.get("llm_interests_css") or cfg.profile_spec.get("llm_interests_section")) and html):
             bio = llm_bio_text(html, cfg)
             if bio:
                 from .llm import interests_from_text
@@ -236,6 +236,14 @@ def cmd_show(args: argparse.Namespace) -> int:
             print(f"{cfg.university}: no output yet, run `extract run --only \"{cfg.university}\" --no-db` first")
             continue
         rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        if args.check:
+            rows = [r for r in rows if any(c["name"] == args.check and not c["passed"] for c in r["checks"])]
+            print(f"== {cfg.university}: {len(rows)} candidates fail check {args.check}")
+            for r in rows[: args.limit]:
+                p = r["payload"]
+                detail = "; ".join(c.get("detail") or "" for c in r["checks"] if c["name"] == args.check)
+                print(f"- {p.get('nameZh')} | {p.get('position')} | email={p.get('email')} | {r['decision']} | {detail} | {r['source_url']}")
+            continue
         random.Random(7).shuffle(rows)
         print(f"== {cfg.university}: {len(rows)} candidates (random sample of {args.limit}, fixed seed)")
         for r in rows[: args.limit]:
@@ -245,6 +253,40 @@ def cmd_show(args: argparse.Namespace) -> int:
             failed = [c["name"] for c in r["checks"] if not c["passed"]]
             if failed:
                 print("    failed checks:", ", ".join(failed))
+    return 0
+
+
+def cmd_headings(args: argparse.Namespace) -> int:
+    """Which section headings do the cached profile pages have, and how many yield research interests? Offline."""
+    from .css import census_headings
+    for cfg in _selected(args):
+        cache = PageCache(PAGE_CACHE_DIR)
+        lc = _read_cached(cache, cfg.list_url)
+        if lc is None:
+            print(f"{cfg.university}: list page not cached")
+            continue
+        domains, _ = load_domain_info(cfg.university)
+        lp = parse_list(lc.html, cfg, lc.final_url or cfg.list_url)
+        titles: Counter[str] = Counter()
+        pages = with_interests = 0
+        without: list[str] = []
+        for r in lp.people:
+            k, url = classify_href(r.profile_href, cfg.list_url, cfg.personal_url_patterns, domains)
+            pc = _read_cached(cache, url) if k == "personal" and url else None
+            if pc is None:
+                continue
+            pages += 1
+            found, ok = census_headings(pc.html, cfg)
+            titles.update(set(found))
+            if ok:
+                with_interests += 1
+            elif len(without) < 6:
+                without.append(f"{r.name_raw} {url}")
+        print(f"== {cfg.university}: {pages} cached profile pages, {with_interests} yield research interests, {pages - with_interests} do not")
+        for t, n in titles.most_common(25):
+            print(f"   {n:4}  {t}")
+        for w in without:
+            print("   no interests:", w)
     return 0
 
 
@@ -273,6 +315,44 @@ def cmd_clean_targets(args: argparse.Namespace) -> int:
                 conn.commit()
             total += len(bad)
     print(("marked failed: " if args.apply else "would mark failed (add --apply): ") + str(total))
+    return 0
+
+
+def cmd_site_learn(args: argparse.Namespace) -> int:
+    """Propose config/sites/_proposed/<slug>.yml for a university without a site config (task 4.3). Needs the list page in the cache
+    (or --html FILE of the RENDERED page). Groq is asked once unless --no-llm. The file says needs_review: true and is not used."""
+    from .programs import slugify
+    from .site_learn import learn, to_yaml
+    from .sitecfg import SITES_DIR
+    if args.html:
+        html = Path(args.html).read_text(encoding="utf-8")
+    else:
+        pc = _read_cached(PageCache(PAGE_CACHE_DIR), args.list_url)
+        if pc is None:
+            raise SystemExit(f"{args.list_url} is not in the page cache: run `fetch run --only \"{args.university}\"` first, or pass --html FILE")
+        html = pc.html
+    client = None
+    if not args.no_llm:
+        from .llm import build_client
+        client = build_client()
+    try:
+        data, stats = learn(html, args.university, args.list_url, [], client)
+    except ValueError as exc:
+        print("site-learn: " + str(exc))
+        return 1
+    out = SITES_DIR / "_proposed" / f"{slugify(args.university)}.yml"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(to_yaml(data), encoding="utf-8")
+    print(f"proposed by {data['proposed_by']}: item `{data['list']['item']}`; {stats['people']} people ({stats['raw_items']} items), "
+          f"names ok {stats['names_ok']:.0%}, links {stats['with_link']:.0%}, positions {stats['with_position']:.0%}, emails {stats['with_email']:.0%} -> {stats['verdict']}")
+    for row in stats["sample"]:
+        print("   ", row)
+    if stats.get("note"):
+        print("note:", stats["note"])
+    print(f"written: {out} (needs_review: true; follow the 4 steps at the top of the file)")
+    if client is not None:
+        t = client.totals
+        print(f"LLM: {int(t['calls'])} calls, {int(t['prompt'])}+{int(t['completion'])} tokens, ~USD {t['usd']:.4f}")
     return 0
 
 
@@ -321,7 +401,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     p = sub.add_parser("show", help="print a random sample of the last output")
     common(p)
     p.add_argument("--limit", type=int, default=10)
+    p.add_argument("--check", help="only candidates that failed this check (e.g. F_email_grounded, B3_faculty_role)")
     p.set_defaults(fn=cmd_show)
+    p = sub.add_parser("headings", help="census of section headings on cached profile pages (why are interests missing?)")
+    common(p)
+    p.set_defaults(fn=cmd_headings)
     p = sub.add_parser("clean-targets", help="mark non-person profile targets failed (preview unless --apply)")
     common(p)
     p.add_argument("--apply", action="store_true")
@@ -330,6 +414,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     common(p)
     p.add_argument("--n", type=int, default=2)
     p.set_defaults(fn=cmd_llm_test)
+    p = sub.add_parser("site-learn", help="propose a site config for a new university (Groq once, human reviews)")
+    p.add_argument("--university", required=True)
+    p.add_argument("--list-url", required=True)
+    p.add_argument("--html", help="saved (rendered) list page instead of the cache")
+    p.add_argument("--no-llm", action="store_true", help="heuristic only, no Groq call")
+    p.set_defaults(fn=cmd_site_learn)
+    from . import programs as _programs
+    _programs.add_parser(sub)
     p = sub.add_parser("report", help="write output/extract/extraction_report.md")
     p.set_defaults(fn=lambda a: __import__("profinder_pipeline.extract.report", fromlist=["x"]).write_report())
     args = ap.parse_args(argv)

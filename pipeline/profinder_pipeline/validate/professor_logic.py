@@ -138,11 +138,18 @@ def evaluate_person(raw: RawPerson, profile: Optional[ProfileData], profile_page
              (not cfg.profile_required or (profile_page is not None and profile_page.status == 200 and profile_page.host_ok)))
     checks.append(Check("B1_official_page_200", b1_ok, True,
                         f"list HTTP {ctx.list_page.status}" + (f", profile HTTP {profile_page.status}" if profile_page else "")))
-    checks.append(Check("B2_name_in_page_text", text_in(name_zh, source.text_norm), True, name_zh))
+    b2_pages = [source] if cfg.profile_required else pages          # sites that need the profile page must show the name there
+    checks.append(Check("B2_name_in_page_text", any(text_in(name_zh, p.text_norm) for p in b2_pages), True, name_zh))
     checks.append(Check("B3_faculty_role", role == "faculty", True, pos_raw))
-    school = cfg.school_en or cfg.school_zh
     dept = raw.department or (profile.department if profile else None)
-    checks.append(Check("B4_school_from_page", bool(school), True, "school/department name from the site config (page title)"))
+    if cfg.profile_spec.get("department_is_school"):
+        # the list mixes several schools (ECNU): the school is whatever the person's own profile page says, else unknown
+        school = profile.department if profile and profile.department else None
+        b4_detail = "school from the person's profile page" if school else "school unknown: profile page not fetched or has no department"
+    else:
+        school = cfg.school_en or cfg.school_zh
+        b4_detail = "school/department name from the site config (page title)"
+    checks.append(Check("B4_school_from_page", bool(school), True, b4_detail))
     if dept:
         ev.append(("department", dept))
     if raw.group:
@@ -159,7 +166,7 @@ def evaluate_person(raw: RawPerson, profile: Optional[ProfileData], profile_page
         grounded = any(email_grounded(seen, p.text) for p in pages)
         domain_ok = email_domain_ok(seen, ctx.email_domains)
         blocked = seen in ctx.suppress_emails
-        checks.append(Check("F_email_grounded", grounded, False, None))
+        checks.append(Check("F_email_grounded", grounded, False, None if grounded else f"{seen} not found in the visible page text (mailto link only?)"))
         checks.append(Check("F_email_domain", domain_ok, False, seen.rsplit("@", 1)[-1]))
         if blocked:
             checks.append(Check("F_email_suppressed", False, False, "on suppress list"))

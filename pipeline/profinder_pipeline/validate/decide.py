@@ -32,3 +32,15 @@ def decide(role_class: str, role_detail: Optional[str], checks: list) -> tuple[D
     if any(c.name.startswith("S_") for c in failed):
         return Decision.needs_review, ProposedStatus.needs_review, None
     return Decision.auto_accept, ProposedStatus.verified, None
+
+
+def decide_checks(checks: list) -> tuple[Decision, ProposedStatus, Optional[str]]:
+    """Same rules for entities without a role (programs, scholarships): B1 fails -> rejected; another blocking check or an S_ flag
+    fails -> needs_review; else auto_accept/verified. H_* checks are information for the reviewer (e.g. 'dates/fees wait for
+    human approval') and never change the decision."""
+    failed = [c for c in checks if not c.passed]
+    if any(c.name.startswith("B1") for c in failed):
+        return Decision.rejected, REJECTED_STATUS, "B1_source_not_usable:" + ";".join(c.detail or "" for c in failed if c.name.startswith("B1"))
+    if any(c.blocking for c in failed) or any(c.name.startswith("S_") for c in failed):
+        return Decision.needs_review, ProposedStatus.needs_review, None
+    return Decision.auto_accept, ProposedStatus.verified, None
