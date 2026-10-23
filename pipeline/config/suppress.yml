@@ -1,0 +1,3 @@
+# Emails and names that must never be stored (doc 02 section 9). One entry per line under each key.
+emails: []
+names: []

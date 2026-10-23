@@ -1,0 +1,22 @@
+# Site config for the ECNU CS faculty list (trial C). Everything needed is on the list page; profile pages are not parsed yet
+# (no real ECNU profile page was available when this was written).
+university: East China Normal University
+list_url: https://cs.ecnu.edu.cn/jzgml/list.htm
+school_en: School of Computer Science and Technology   # list page site: 计算机科学与技术学院
+school_zh: 计算机科学与技术学院
+render: static
+personal_url_patterns:
+  - '^https://faculty\.ecnu\.edu\.cn/'
+  - '/_redirect\?'
+list:
+  item: "div.team li[name][data-name]"
+  min_items: 50
+  fields:
+    name:          {css: ".li-text p a"}
+    profile_href:  {css: ".li-text p a", attr: href}
+    position:      {label: '职称[：:]\s*([^$\n]*)'}
+    emails:        {emails: true}
+    group:         {attr_of_item: "data-name"}
+profile:
+  required: false
+  fields: {}

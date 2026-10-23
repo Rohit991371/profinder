@@ -30,7 +30,7 @@ def normalise_position(position: Optional[str]) -> tuple[Optional[str], str]:
 def _normalise_zh(p: str) -> tuple[Optional[str], str]:
     if "博士后" in p:
         return "Postdoctoral Researcher", "non_faculty"
-    if any(k in p for k in ("工程师", "实验师", "技术员", "工程技术")):
+    if any(k in p for k in ("工程师", "高工", "实验师", "技术员", "工程技术")):
         return "Engineer/Technician", "non_faculty"
     for key, value in (("助理教授", "Assistant Professor"), ("副教授", "Associate Professor"), ("教授", "Professor"),
                        ("副研究员", "Associate Researcher"), ("助理研究员", "Assistant Researcher"),

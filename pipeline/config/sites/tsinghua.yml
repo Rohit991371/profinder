@@ -1,0 +1,34 @@
+# Site config for the Tsinghua CS faculty list (trial A). CSS first; no LLM needed for the list.
+# Reviewed against the saved page on 2026-10-23. A human must re-check this file if the site layout changes.
+university: Tsinghua University
+list_url: https://www.cs.tsinghua.edu.cn/szzk/jzgml.htm
+school_en: Department of Computer Science and Technology   # page title: 教职工名录-清华大学计算机科学与技术系
+school_zh: 计算机科学与技术系
+render: static
+personal_url_patterns:
+  - '/info/\d+/\d+\.htm$'
+list:
+  item: "div.people01-nr li"
+  min_items: 100            # sanity: fewer than this => needs_review (layout probably changed)
+  fields:
+    name:          {css: "h2 a"}
+    profile_href:  {css: "h2 a", attr: href}
+    position:      {css: "div.text p", index: 0}
+    emails:        {emails: true}
+    department:    {previous: "h4"}      # institute heading (Chinese, as on the page)
+    group:         {previous: "h3"}      # rank group heading, evidence only
+profile:
+  required: false
+  fields:
+    position:         {label: '职称[：:]\s*(.+)'}
+    emails:           {emails: true, css: ".v_news_content"}
+    personal_website: {labelled_link: "主页"}
+    interests:
+      section:
+        container: ".v_news_content"
+        boundary: "h4"
+        titles: ["研究领域", "研究方向"]
+        # some profiles have no heading element between sections: stop at the next known section title
+        stop_titles: ["教育背景", "社会兼职", "研究概况", "研究课题", "讲授课程", "教学概况", "奖励与荣誉", "学术成果",
+                      "代表性论文", "发表论文", "出版著作", "专利", "工作经历", "科研项目", "荣誉奖励", "学术兼职", "个人简历"]
+        max_lines: 8
