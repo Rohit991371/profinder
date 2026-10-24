@@ -30,7 +30,7 @@ def test_every_enum_value_is_allowed_by_a_check_constraint():
 
 
 def test_migration_listing_and_crlf_insensitive_checksum():
-    assert [m.version for m in list_migrations()] == ["001_ingest_schema"]
+    assert [m.version for m in list_migrations()] == ["001_ingest_schema", "002_current_candidate_view", "003_qa_columns"]
     assert sql_checksum("a\r\nb\r\n") == sql_checksum("a\nb\n")
     assert len(list_migrations()[0].checksum) == 64
 

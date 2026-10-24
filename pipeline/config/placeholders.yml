@@ -6,6 +6,8 @@ rules:
   - {entity: University,  field: officialUrl,       kind: contains,    value: "campuschina.org", note: "CampusChina placeholder (89 of 104 universities)"}
   - {entity: Professor,   field: researchInterests, kind: equals,      value: "computer science", note: "keyword-only filler"}
   - {entity: Professor,   field: researchInterests, kind: regex,       value: '^listed on the official\b.*faculty directory', note: "boilerplate, e.g. Fudan"}
+  - {entity: Professor,   field: researchInterests, kind: regex,       value: '^\s*(computer science\s*[;,，；]?\s*)+$', note: "repeated keyword-only filler, e.g. 'computer science; computer science'"}
+  - {entity: Professor,   field: position,          kind: equals,      value: "Faculty", note: "generic title from the old importer"}
   - {entity: Professor,   field: position,          kind: cjk_only,    note: "Chinese-only position; should be normalised English"}
   - {entity: Program,     field: deadline,          kind: starts_with, value: "Not confirmed", note: "312 template rows"}
   - {entity: Program,     field: teachingLang,      kind: regex,       value: '^English or Chinese\s*[-\u2013\u2014]\s*confirm', note: "template wording"}

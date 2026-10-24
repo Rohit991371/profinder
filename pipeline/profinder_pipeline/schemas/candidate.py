@@ -1,6 +1,6 @@
 """ingest.candidate as a typed object (doc 01 section 6). Evidence, checks and diffs are lists of small models, never dicts."""
 from datetime import datetime
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
@@ -30,6 +30,7 @@ class FieldChange(BaseModel):
     field: str
     before: Optional[str] = None             # JSON-encoded value
     after: Optional[str] = None
+    kind: Literal["enrich", "propose", "status"] = "enrich"   # Iteration 5: what the loader does with it
 
 
 class Candidate(BaseModel):

@@ -12,7 +12,7 @@ from ..extract.css import ProfileData, RawPerson, classify_href
 from ..extract.emailtools import email_grounded, valid_unique
 from ..extract.sitecfg import SiteConfig
 from ..utils.emails import email_domain_ok
-from ..utils.positions import normalise_position
+from ..utils.positions import resolve_position
 from ..utils.text import CJK_RE, clean_name
 from ..utils.urls import canonical_url, host_in_domains
 from .areas import classify_areas
@@ -109,12 +109,10 @@ def evaluate_person(raw: RawPerson, profile: Optional[ProfileData], profile_page
     pages = [ctx.list_page] + ([profile_page] if profile_page is not None else [])
 
     # ---- role (profile wins over list; a disagreement is a soft flag)
-    pos_raw = (profile.position if profile and profile.position else None) or raw.position_raw
-    pos_en, role = normalise_position(pos_raw)
-    if profile and profile.position and raw.position_raw:
-        other_en, _ = normalise_position(raw.position_raw)
-        if other_en != normalise_position(profile.position)[0]:
-            checks.append(Check("S_position_conflict", False, False, f"list '{raw.position_raw}' vs profile '{profile.position}'"))
+    res = resolve_position(raw.position_raw, profile.position if profile else None)
+    pos_raw, pos_en, role = res.raw, res.en, res.role
+    if res.conflict:
+        checks.append(Check("S_position_conflict", False, False, res.conflict))
     if pos_raw:
         ev.append(("position_raw", pos_raw))
 

@@ -3,6 +3,7 @@
 role class: faculty | non_faculty | unknown. 'unknown' means a human decides (doc 02: role unclear -> needs_review).
 Decision pending for Iteration 4: 助理研究员 (assistant researcher) is currently classed as faculty."""
 import re
+from dataclasses import dataclass
 from typing import Optional
 
 _EXACT_ZH = {
@@ -55,3 +56,47 @@ def _normalise_en(position: str) -> tuple[Optional[str], str]:
         if key in p:
             return value, "faculty"
     return None, "unknown"
+
+
+_SEG_RE = re.compile(r"[；;，,、/]")
+
+
+def normalise_primary(position: Optional[str]) -> tuple[Optional[str], str]:
+    """For title lists such as '青年研究员；上海人工智能实验室副研究员；博导': the FIRST segment that is a known role wins.
+    Honours and administrative posts (博士生导师, 系主任, 教师, 国家杰青) are 'unknown' and skipped."""
+    if not position or not position.strip():
+        return None, "unknown"
+    for seg in (s.strip() for s in _SEG_RE.split(position)):
+        if seg:
+            en, role = normalise_position(seg)
+            if role != "unknown":
+                return en, role
+    return None, "unknown"
+
+
+@dataclass(frozen=True)
+class PositionResolution:
+    raw: Optional[str]
+    en: Optional[str]
+    role: str                      # faculty | non_faculty | unknown
+    conflict: Optional[str] = None  # set only when BOTH sources name a faculty rank and the ranks differ
+
+
+def resolve_position(list_raw: Optional[str], profile_raw: Optional[str]) -> PositionResolution:
+    """Iteration 5 rule. The profile page wins only when it names a known role; otherwise the list value is used (ECNU profiles often
+    show honours instead of a rank). If either side says non-faculty the person is non-faculty (-> rejected). Two different
+    faculty ranks (副教授 vs 副研究员) stay a soft conflict for a human; the profile rank is kept."""
+    l_en, l_role = normalise_primary(list_raw)
+    p_en, p_role = normalise_primary(profile_raw)
+    if "non_faculty" in (l_role, p_role):
+        if p_role == "non_faculty":
+            return PositionResolution(profile_raw, p_en, "non_faculty")
+        return PositionResolution(list_raw, l_en, "non_faculty")
+    if p_role == "faculty":
+        conflict = None
+        if l_role == "faculty" and l_en != p_en:
+            conflict = f"list '{list_raw}' vs profile '{profile_raw}'"
+        return PositionResolution(profile_raw, p_en, "faculty", conflict)
+    if l_role == "faculty":
+        return PositionResolution(list_raw, l_en, "faculty")
+    return PositionResolution(list_raw or profile_raw, None, "unknown")
