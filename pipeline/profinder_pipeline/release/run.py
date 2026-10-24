@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-# from ..paths import OUTPUT_DIR, PIPELINE_ROOT
 from ..paths import OUTPUT_DIR, PIPELINE_DIR as PIPELINE_ROOT
 from ..review.csvio import write_csv
 from .builder import FILES, SOURCE_FILE, build_files, choose_qa, is_selected, manifest, qa_gate, report_text, sha256_text

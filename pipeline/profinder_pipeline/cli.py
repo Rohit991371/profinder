@@ -36,6 +36,8 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("match", help="match candidates against the app DB and plan additive writes (read-only on app tables): `match --help`", add_help=False)
 
     sub.add_parser("release", help="build/verify/approve release bundles: `release --help`", add_help=False)
+    sub.add_parser("load", help="load an approved release into the app DB (dry-run by default): `load --help`", add_help=False)
+    sub.add_parser("rollback", help="undo a loaded release (dry-run by default): `rollback --help`", add_help=False)
     sub.add_parser("review", help="review CSV export/import: `review --help`", add_help=False)
 
     t = sub.add_parser("trial-tsinghua", help="Trial A: the Iteration 0 spike on the real schemas")
@@ -85,7 +87,7 @@ def _passthrough(argv: list[str]):
             level, i = argv[i].split("=", 1)[1], i + 1
         else:
             return None
-    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract", "match", "release", "review"):
+    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract", "match", "release", "review", "load", "rollback"):
         return argv[i], argv[i + 1:], level
     return None
 
@@ -114,6 +116,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         if cmd == "review":
             from .review.run import main as review_main
             return review_main(rest)
+        if cmd == "load":
+            from .load.run import main as load_main
+            return load_main(rest)
+        if cmd == "rollback":
+            from .load.run import rollback_main
+            return rollback_main(rest)
         from .discovery.run import main as discover_main
         return discover_main(rest)
     parser = _build_parser()

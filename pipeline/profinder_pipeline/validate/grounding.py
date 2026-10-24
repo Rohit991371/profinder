@@ -38,8 +38,8 @@ def join_interests(lines: list[str], max_chars: int = 800) -> Optional[str]:
 
 def keywords_from(text: Optional[str], limit: int = 10, max_len: int = 40) -> Optional[str]:
     """<= `limit` short phrases split out of the interests text (no new words are invented). None if nothing usable."""
-    if not text:
-        return None
+    if not text or len(text) > 200 or "。" in text:
+        return None                      # long prose: splitting it gives sentence fragments, not keywords
     seen: list[str] = []
     for part in _SPLIT_KEYWORDS.split(text):
         p = part.strip(" .。:：()（）")
