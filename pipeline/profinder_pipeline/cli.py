@@ -33,6 +33,11 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("fetch", help="fetch stage (gate, static + browser fetch, cache, faculty planner): `fetch --help`", add_help=False)
     sub.add_parser("extract", help="extraction & validation (site configs, CSS, Groq fallback, candidates): `extract --help`", add_help=False)
 
+    sub.add_parser("match", help="match candidates against the app DB and plan additive writes (read-only on app tables): `match --help`", add_help=False)
+
+    sub.add_parser("release", help="build/verify/approve release bundles: `release --help`", add_help=False)
+    sub.add_parser("review", help="review CSV export/import: `review --help`", add_help=False)
+
     t = sub.add_parser("trial-tsinghua", help="Trial A: the Iteration 0 spike on the real schemas")
     tsub = t.add_subparsers(dest="trial_command", metavar="<step>")
     tp = tsub.add_parser("parse", help="list page -> candidates.jsonl")
@@ -80,7 +85,7 @@ def _passthrough(argv: list[str]):
             level, i = argv[i].split("=", 1)[1], i + 1
         else:
             return None
-    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract"):
+    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract", "match", "release", "review"):
         return argv[i], argv[i + 1:], level
     return None
 
@@ -100,6 +105,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         if cmd == "extract":
             from .extract.run import main as extract_main
             return extract_main(rest)
+        if cmd == "match":
+            from .match.run import main as match_main
+            return match_main(rest)
+        if cmd == "release":
+            from .release.run import main as release_main
+            return release_main(rest)
+        if cmd == "review":
+            from .review.run import main as review_main
+            return review_main(rest)
         from .discovery.run import main as discover_main
         return discover_main(rest)
     parser = _build_parser()
