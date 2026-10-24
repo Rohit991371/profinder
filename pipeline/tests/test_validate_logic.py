@@ -165,3 +165,9 @@ def test_decide_rules():
     assert decide("faculty", "x", ok + [Check("B2_name_in_page_text", False)])[0] == Decision.needs_review
     assert decide("faculty", "x", ok + [Check("S_unusual_name", False, False)])[0] == Decision.needs_review
     assert decide("faculty", "x", ok + [Check("F_email_domain", False, False)])[0] == Decision.auto_accept
+
+
+def test_keywords_are_not_cut_out_of_long_prose():
+    from profinder_pipeline.validate.grounding import keywords_from
+    prose = "课题组长期致力于网络与智能计算系统的基础理论、关键技术与应用研究，研究工作从云网融合与分布式计算拓展至分布式智能计算。" * 3
+    assert keywords_from(prose) is None and keywords_from("强化学习、决策大模型、智能体技术、具身智能") == "强化学习, 决策大模型, 智能体技术, 具身智能"

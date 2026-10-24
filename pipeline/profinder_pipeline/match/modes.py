@@ -179,3 +179,12 @@ def effective_decision(decision: str, checks: list[dict[str, Any]]) -> str:
                                          for c in checks):
         return "needs_review"
     return decision
+
+
+def row_locked(entity: str, existing: dict[str, Any], lock_policy: str = "strict") -> bool:
+    """Human-touched test for one existing row (only Professor rows can be locked; see engine.plan_candidates)."""
+    if entity != "Professor":
+        return False
+    if not is_human_touched(existing.get("createdAt"), existing.get("updatedAt"), existing.get("lastSyncedAt")):
+        return False
+    return not (lock_policy == "import-ok" and existing.get("lastSyncedAt") is None and existing.get("dataSource") in SCRIPT_SOURCES)
