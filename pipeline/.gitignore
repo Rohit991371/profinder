@@ -23,3 +23,5 @@ docs/
 
 PLAN.md
 INSTRUCTIONS.MD
+backup_before_load.sql
+backup_*.sql

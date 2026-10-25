@@ -4,6 +4,7 @@ Cache hits cost nothing (no robots check, no budget, no network). Every outcome 
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, Optional
@@ -74,6 +75,7 @@ class FetchEngine:
                  offline: bool = False, allow_render: bool = True) -> None:
         self.cache, self.static, self.gate, self.renderer = cache, static, gate, renderer
         self.hints, self.offline, self.allow_render = hints or Hints(), offline, allow_render
+        self._sleep = time.sleep
         self.stats = {"cache_hits": 0, "static": 0, "rendered": 0, "errors": 0}
 
     # ---- helpers ----
@@ -151,6 +153,12 @@ class FetchEngine:
             return self._fail(url, "offline_miss")
 
         d = self.gate.check(url)
+        if not d.allowed and d.reason == "host_blocked":
+            rem = self.gate.cooldown_remaining(host_of(url))
+            if rem > 0 and self.gate.may_wait(rem):          # breaker cool-down: wait, then one half-open probe
+                self.gate.note_waited(rem)
+                self._sleep(rem + 1.0)
+                d = self.gate.check(url)
         if not d.allowed:
             return self._fail(url, d.reason, robots=d.robots_status)
         host = host_of(url)
@@ -195,7 +203,11 @@ class FetchEngine:
                 return self._fail(url, "needs_renderer", notes, d.robots_status, use_static)
             self.gate.spend()
             self.stats["rendered"] += 1
+            t0 = time.monotonic()
             rr = self.renderer.render(url, wait_selector, hint.settle_ms)
+            obs = getattr(getattr(self.static, "throttle", None), "observe", None)
+            if obs is not None:
+                obs(host, time.monotonic() - t0, not rr.error and not (rr.status and rr.status >= 400))
             notes += list(rr.notes)
             if rr.error:
                 self.gate.note_failure(host)

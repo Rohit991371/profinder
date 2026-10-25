@@ -40,6 +40,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("rollback", help="undo a loaded release (dry-run by default): `rollback --help`", add_help=False)
     sub.add_parser("review", help="review CSV export/import: `review --help`", add_help=False)
 
+    sub.add_parser("enrich", help="OpenAlex ids for EXISTING official-sourced professors only (probe/run/approve/load/rollback): `enrich --help`", add_help=False)
+    sub.add_parser("audit", help="read-only legacy audit of rows without an official source: `audit --help`", add_help=False)
+    sub.add_parser("batch", help="rotating batch of universities: fetch -> extract -> match, resumable, with time/cost report: `batch --help`", add_help=False)
+
     t = sub.add_parser("trial-tsinghua", help="Trial A: the Iteration 0 spike on the real schemas")
     tsub = t.add_subparsers(dest="trial_command", metavar="<step>")
     tp = tsub.add_parser("parse", help="list page -> candidates.jsonl")
@@ -87,7 +91,7 @@ def _passthrough(argv: list[str]):
             level, i = argv[i].split("=", 1)[1], i + 1
         else:
             return None
-    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract", "match", "release", "review", "load", "rollback"):
+    if i < len(argv) and argv[i] in ("registry", "discover", "fetch", "extract", "match", "release", "review", "load", "rollback", "enrich", "audit", "batch"):
         return argv[i], argv[i + 1:], level
     return None
 
@@ -122,6 +126,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         if cmd == "rollback":
             from .load.run import rollback_main
             return rollback_main(rest)
+        if cmd == "enrich":
+            from .enrich.run import main as enrich_main
+            return enrich_main(rest)
+        if cmd == "audit":
+            from .audit.legacy import main as audit_main
+            return audit_main(rest)
+        if cmd == "batch":
+            from .batch.run import main as batch_main
+            return batch_main(rest)
         from .discovery.run import main as discover_main
         return discover_main(rest)
     parser = _build_parser()

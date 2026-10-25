@@ -42,14 +42,14 @@ def _utf8() -> None:
 
 def build_engine(args, domains_hint=None) -> FetchEngine:
     st = get_settings()
-    throttle = Throttle(delay=args.delay)
+    throttle = Throttle(delay=args.delay, slow_after=getattr(args, "slow_after", None) or None)
     static = StaticFetcher(make_client(st.proxy_url), throttle, RetryPolicy())
     renderer = None
     if not getattr(args, "no_render", False) and not getattr(args, "offline", False):
         ok, _ = BrowserRenderer.installed()
         renderer = BrowserRenderer(st.proxy_url) if ok else None
     holder: dict = {}
-    gate = Gate(lambda base: holder["engine"].read_robots(base))     # robots reading uses the engine's static client + browser fallback
+    gate = Gate(lambda base: holder["engine"].read_robots(base), cooldown=getattr(args, "cooldown", None) or None)     # robots reading uses the engine's static client + browser fallback
     engine = FetchEngine(PageCache(CACHE_DIR), static, gate, renderer, Hints.load(CONFIG_DIR / "fetch_hints.yml"),
                          offline=getattr(args, "offline", False))
     holder["engine"] = engine
@@ -293,6 +293,8 @@ def main(argv) -> int:
     r.add_argument("--max-list-pages", type=int, default=40)
     r.add_argument("--no-profiles", action="store_true", help="list pages only")
     r.add_argument("--offline", action="store_true", help="cache only, no network")
+    r.add_argument("--slow-after", type=float, default=8.0, help="seconds: a slower answer doubles the delay to that host, up to 8x (0 = off; default 8)")
+    r.add_argument("--cooldown", type=float, default=120.0, help="seconds before a host whose breaker tripped is probed again (doubles each trip; 0 = stay blocked; default 120)")
     r.add_argument("--dry-run", action="store_true", help="no database writes (disk cache still written)")
     pr = sub.add_parser("probe", help="fetch one URL through the full engine")
     common(pr)
