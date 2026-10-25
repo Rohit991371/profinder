@@ -24,15 +24,33 @@ class Throttle:
     """At least delay (+ random jitter) seconds between two requests to the same host."""
 
     def __init__(self, delay: float = 2.5, jitter: float = 0.5, clock: Callable[[], float] = time.monotonic,
-                 sleep: Callable[[float], None] = time.sleep, rng: Callable[[], float] = random.random) -> None:
+                 sleep: Callable[[float], None] = time.sleep, rng: Callable[[], float] = random.random,
+                 slow_after: Optional[float] = None, max_factor: float = 8.0) -> None:
         self.delay, self.jitter, self._clock, self._sleep, self._rng = delay, jitter, clock, sleep, rng
+        self.slow_after, self.max_factor = slow_after, max_factor     # slow_after=None: no adaptation (the old behaviour)
         self._last: dict[str, float] = {}
+        self._factor: dict[str, float] = {}
+
+    def factor(self, host: str) -> float:
+        return self._factor.get(host, 1.0)
+
+    def observe(self, host: str, seconds: float, ok: bool = True) -> None:
+        """Adaptive delay (Iteration 6): a slow or failed answer doubles the gap to that host (up to max_factor x);
+        a fast answer halves it again (down to 1x). Politeness only ever increases under load."""
+        if self.slow_after is None:
+            return
+        f = self._factor.get(host, 1.0)
+        if not ok or seconds >= self.slow_after:
+            f = min(f * 2.0, self.max_factor)
+        elif seconds < self.slow_after / 2.0:
+            f = max(f / 2.0, 1.0)
+        self._factor[host] = f
 
     def wait(self, host: str) -> float:
         slept = 0.0
         last = self._last.get(host)
         if last is not None:
-            gap = self.delay + self.jitter * self._rng()
+            gap = (self.delay + self.jitter * self._rng()) * self.factor(host)
             slept = max(0.0, gap - (self._clock() - last))
             if slept > 0:
                 self._sleep(slept)
@@ -104,17 +122,24 @@ class Gate:
     """State for one university at a time: begin() resets domains, budget and the per-host breakers.
     The robots cache lives for the whole run (hosts differ between universities)."""
 
-    def __init__(self, robots_reader: Callable[[str], tuple], breaker: int = 3, static_block_limit: int = 2) -> None:
+    def __init__(self, robots_reader: Callable[[str], tuple], breaker: int = 3, static_block_limit: int = 2,
+                 cooldown: Optional[float] = None, max_cooldown: float = 1800.0, max_wait_total: float = 900.0,
+                 clock: Callable[[], float] = time.monotonic) -> None:
         self._reader = robots_reader               # base_url -> (kind, RobotFileParser|None)
         self._robots: dict[str, tuple] = {}
         self.breaker, self.static_block_limit = breaker, static_block_limit
+        # cooldown=None keeps the old rule (a tripped host stays blocked until the next university). With a cooldown (seconds),
+        # a tripped host is probed again after it (doubling at every further trip, capped): one half-open request decides.
+        self.cooldown, self.max_cooldown, self.max_wait_total, self._clock = cooldown, max_cooldown, max_wait_total, clock
         self.begin([], 0)
 
     def begin(self, domains: list[str], budget: int) -> None:
         self.domains, self.budget, self.used, self.exhausted = list(domains), budget, 0, False
         self._fails: dict[str, int] = {}
         self._static_blocks: dict[str, int] = {}
-        self._open: set[str] = set()
+        self._open: dict[str, float] = {}          # host -> time the breaker may be probed again (inf = until the next university)
+        self._trips: dict[str, int] = {}
+        self.waited = 0.0
 
     # ---- decisions ----
     def on_domain(self, url: str) -> bool:
@@ -147,7 +172,11 @@ class Gate:
             return Decision(False, "off_domain")
         host = host_of(url)
         if host in self._open:
-            return Decision(False, "host_blocked")
+            if self._clock() >= self._open[host]:
+                del self._open[host]               # half-open: one request decides; a failure trips it again, for longer
+                self._fails[host] = self.breaker - 1
+            else:
+                return Decision(False, "host_blocked")
         d = self.robots(url)
         if not d.allowed:
             return d
@@ -166,7 +195,26 @@ class Gate:
     def note_failure(self, host: str) -> None:
         self._fails[host] = self._fails.get(host, 0) + 1
         if self._fails[host] >= self.breaker:
-            self._open.add(host)
+            self._trips[host] = self._trips.get(host, 0) + 1
+            if self.cooldown:
+                wait = min(self.cooldown * (2 ** (self._trips[host] - 1)), self.max_cooldown)
+                self._open[host] = self._clock() + wait
+            else:
+                self._open[host] = float("inf")
+
+    def cooldown_remaining(self, host: str) -> float:
+        """Seconds until a tripped host may be probed again (0 = not tripped, or blocked until the next university)."""
+        t = self._open.get(host)
+        if t is None or t == float("inf"):
+            return 0.0
+        return max(0.0, t - self._clock())
+
+    def may_wait(self, seconds: float) -> bool:
+        """The engine sleeps through a cooldown only while the per-university waiting budget lasts."""
+        return self.cooldown is not None and self.waited + seconds <= self.max_wait_total
+
+    def note_waited(self, seconds: float) -> None:
+        self.waited += seconds
 
     def note_static_block(self, host: str) -> None:
         self._static_blocks[host] = self._static_blocks.get(host, 0) + 1

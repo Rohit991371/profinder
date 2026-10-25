@@ -78,19 +78,28 @@ class StaticFetcher:
                  sleep: Callable[[float], None] = time.sleep) -> None:
         self.client, self.throttle, self.retry, self._sleep = client, throttle, retry or RetryPolicy(), sleep
 
+    def _observe(self, host: str, seconds: float, ok: bool) -> None:
+        obs = getattr(self.throttle, "observe", None)
+        if obs is not None:
+            obs(host, seconds, ok)
+
     def _request(self, url: str) -> RawResponse:
         host = re.sub(r"^[a-z]+://", "", url).split("/", 1)[0].lower()
         kind, last_status = "connect_error", None
         for attempt in range(1, self.retry.max_attempts + 1):
             self.throttle.wait(host)
             retry_after = None
+            t0 = time.monotonic()
             try:
                 r = self.client.get(url)
             except httpx.TimeoutException:
                 kind, last_status = "timeout", None
+                self._observe(host, time.monotonic() - t0, False)
             except httpx.HTTPError:
                 kind, last_status = "connect_error", None
+                self._observe(host, time.monotonic() - t0, False)
             else:
+                self._observe(host, time.monotonic() - t0, r.status_code < 500 and r.status_code != 429)
                 cls = classify_status(r.status_code)
                 ctype = r.headers.get("content-type", "") or ""
                 if cls != "retry":
