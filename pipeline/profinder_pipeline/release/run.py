@@ -2,7 +2,8 @@
   build [--only NAME] [--dry-run]      freeze the released candidates into output/releases/<date>_<id>/ and register a draft in ingest.release
   verify --release ID                  recompute the checksums of the folder
   qa-status --release ID               QA gate (5 % sample, professors <= 2 % errors, others 0)
-  approve --release ID --by NAME       needs verify OK and the QA gate to pass
+  approve --release ID --by NAME       needs verify OK and the QA gate to pass; writes approval.json into the folder
+  import --release ID                  owner side: verify the bundle + approval.json and register it as approved (then `load` works)
   list
 Nothing here touches the app tables."""
 import argparse
@@ -160,8 +161,28 @@ def cmd_approve(args: argparse.Namespace) -> int:
     cur = conn.execute("UPDATE ingest.release SET status = 'approved', approved_by = %s, approved_at = now() WHERE release_id = %s AND status = 'draft'",
                        (args.by, args.release))
     conn.commit()
+    if cur.rowcount:
+        from .approval import write_approval
+        man = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        write_approval(folder, man, args.by, gate)           # travels with the bundle: `release import` on the owner's side checks it
     print("approved" if cur.rowcount else "nothing changed (is the release a draft?)")
     return 0 if cur.rowcount else 1
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    """Owner side: register an approved bundle that was built elsewhere (copy its folder to output/releases/ first)."""
+    from .approval import check_approval, register
+    folder = _folder(args.release)
+    man = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+    problems = verify_folder(folder) + check_approval(folder, man)
+    if problems:
+        print("NOT imported:", "; ".join(problems))
+        return 1
+    conn = connect_ingest()
+    status = register(conn, folder)
+    conn.commit()
+    print(f"imported release {man['release_id']} (checksum {man['release_checksum'][:16]}...): status {status}")
+    return 0
 
 
 def cmd_list(_: argparse.Namespace) -> int:
@@ -183,9 +204,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         s.add_argument("--release", required=True)
         if name == "approve":
             s.add_argument("--by", required=True)
+    i = sub.add_parser("import", help="owner side: register an approved bundle built elsewhere (needs its approval.json)")
+    i.add_argument("--release", required=True)
     sub.add_parser("list")
     args = ap.parse_args(argv)
-    return {"build": cmd_build, "verify": cmd_verify, "qa-status": cmd_qa, "approve": cmd_approve, "list": cmd_list}[args.cmd](args)
+    return {"build": cmd_build, "verify": cmd_verify, "qa-status": cmd_qa, "approve": cmd_approve, "import": cmd_import, "list": cmd_list}[args.cmd](args)
 
 
 if __name__ == "__main__":

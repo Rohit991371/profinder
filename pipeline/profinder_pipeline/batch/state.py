@@ -129,7 +129,7 @@ def report_row(name: str, rec: dict) -> dict:
     pg = rec.get("pages") or {}
     return {"university": name, "status": rec.get("status"), "note": rec.get("note") or "", "has_site_config": rec.get("has_site_config"),
             "attempts": rec.get("attempts"), "fetch_s": sec("fetch"), "extract_s": sec("extract"), "match_s": sec("match"),
-            "total_s": round(sum(sec(k) for k in ("learn", "fetch", "extract", "match")), 1), "pages_static": pg.get("static", 0),
+            "total_s": round(sum(sec(k) for k in ("learn", "fetch", "extract", "programs", "match")), 1), "pages_static": pg.get("static", 0),
             "pages_rendered": pg.get("playwright", 0), "page_errors": pg.get("errors", 0), "profiles_pending": rec.get("profiles_pending"),
             "candidates_auto_accept": c.get("auto_accept", 0), "candidates_needs_review": c.get("needs_review", 0),
             "candidates_rejected": (c.get("rejected", 0) + c.get("human_rejected", 0)), "groq_calls": g.get("calls", 0),

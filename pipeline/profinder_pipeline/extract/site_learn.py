@@ -185,7 +185,36 @@ def url_patterns_from_samples(hrefs: list[str]) -> list[str]:
         folders[re.escape(m.group(1) + folder) + r"/[^/]+$"] += 1
     if len(exact) > 5 and len(folders) <= 3:
         return [p for p, _n in folders.most_common(3)]
+    if len(exact) > 5:
+        seg = _by_segments(hrefs)
+        if seg:
+            return seg
     return [p for p, _n in exact.most_common(3)]
+
+
+def _by_segments(hrefs: list[str]) -> list[str]:
+    """Teacher portals give every person their own folder (https://faculty.x.edu.cn/anying/zh_CN/index.htm). Exact patterns would then match
+    only the three most common people. Generalise per path segment: a position whose value differs between people becomes `[^/?#]+`,
+    a position that is the same for (nearly) everybody stays literal. Returns [] unless the result is at most 3 patterns that together
+    still match every sample."""
+    groups: dict[tuple, list[list[str]]] = {}
+    for h in hrefs:
+        m = re.match(r"(https?)://([^/?#]+)(/[^?#]*)?", h or "")
+        if not m:
+            continue
+        segs = [x for x in (m.group(3) or "").split("/") if x]
+        groups.setdefault(("https?", m.group(2), len(segs)), []).append(segs)     # http and https links to one portal are the same person page
+    patterns: list[str] = []
+    for (scheme, host, n), rows in groups.items():
+        parts = []
+        for i in range(n):
+            vals = {r[i] for r in rows}
+            parts.append(re.escape(rows[0][i]) if len(vals) == 1 else r"[^/?#]+")
+        prefix = scheme + re.escape("://" + host)
+        patterns.append(prefix + "".join("/" + p for p in parts) + "$" if n else prefix + "/?$")
+    patterns = sorted(set(patterns), key=lambda p: -len(p))[:3]
+    ok = all(any(re.match(p, h) for p in patterns) for h in hrefs if h)
+    return patterns if ok and len(patterns) <= 3 else []
 
 
 def validate_proposal(html: str, cfg: SiteConfig) -> dict[str, Any]:

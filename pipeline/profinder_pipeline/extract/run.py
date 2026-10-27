@@ -107,6 +107,7 @@ def extract_university(cfg: SiteConfig, conn: Any, use_llm: bool, llm_limit: int
     seen_keys: set[str] = set()
     st: Counter[str] = Counter()
     llm_used = 0
+    bad_links: list[str] = []
     model = getattr(client, "model", None)
 
     for raw in lp.people:
@@ -121,6 +122,10 @@ def extract_university(cfg: SiteConfig, conn: Any, use_llm: bool, llm_limit: int
                 profile = parse_profile(pc.html, cfg, url)
         if cfg.profile_required and profile_page is None:
             st["pending_profile"] += 1
+            if kind != "personal":
+                st["not_personal_link"] += 1          # the link does not match personal_url_patterns: fixing the config, not fetching, is needed
+                if len(bad_links) < 6:
+                    bad_links.append(f"{raw.name_raw}: {url or raw.profile_href}")
             continue
         llm_text: Optional[str] = None
         if (use_llm and client is not None and profile is not None and profile_page is not None and not profile.interests_lines
@@ -151,7 +156,7 @@ def extract_university(cfg: SiteConfig, conn: Any, use_llm: bool, llm_limit: int
         "list_url": cfg.list_url, "list_status": list_page.status, "list_fetched_at": list_page.fetched_at.isoformat(timespec="seconds"),
         "raw_items": lp.raw_items, "people_parsed": n, "skipped_not_person_link": lp.skipped_not_person_link,
         "duplicate_urls": lp.duplicate_urls, "candidates": len(cands), "decisions": {k: st[k] for k in ("auto_accept", "needs_review", "rejected")},
-        "pending_profile": st["pending_profile"], "no_name": st["no_name"], "duplicate_key": st["duplicate_key"],
+        "pending_profile": st["pending_profile"], "not_personal_link": st["not_personal_link"], "not_personal_examples": bad_links, "no_name": st["no_name"], "duplicate_key": st["duplicate_key"],
         "llm_interest_calls": llm_used,
     }
     _write_json(OUT_DIR / f"{slug}_stats.json", stats)
@@ -211,6 +216,11 @@ def cmd_run(args: argparse.Namespace) -> int:
             print(f"[{cfg.university}] parsed {stats['people_parsed']} people -> {stats['candidates']} candidates "
                   f"(auto_accept {d['auto_accept']}, needs_review {d['needs_review']}, rejected {d['rejected']}); "
                   f"waiting for profile page: {stats['pending_profile']}; llm calls: {stats['llm_interest_calls']}")
+            if stats.get("not_personal_link"):
+                print(f"  WARNING: {stats['not_personal_link']} of the waiting people have a profile link that does NOT match personal_url_patterns in "
+                      f"config/sites/{cfg.slug}.yml (fetching more pages will not help): make the pattern match the person URLs, e.g. one pattern with [^/]+ for the person folder")
+                for ex in stats.get("not_personal_examples", []):
+                    print("     e.g.", ex)
             if conn is not None and not args.dry_run:
                 run_id = start_run(conn, RunKind.extract, {"university": cfg.university, "extract_version": EXTRACT_VERSION, "llm": bool(args.llm)})
                 for c in cands:

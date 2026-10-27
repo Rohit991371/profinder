@@ -127,3 +127,22 @@ def test_engine_waits_through_the_cooldown_then_probes_once(tmp_path):
     for u in urls[:3]:
         e2.get(u)
     assert e2.get(urls[3]).error == "host_blocked"               # no cooldown configured: the old behaviour
+
+
+def test_fetch_cached_shows_what_was_saved(tmp_path, monkeypatch, capsys):
+    """`fetch cached URL` is the first thing to run when a site config 'does not work': it shows whether the saved page is real content."""
+    import argparse
+    from profinder_pipeline.fetch import run as FR
+    from profinder_pipeline.fetch.cache import PageCache
+    import profinder_pipeline.paths as P
+    monkeypatch.setattr(P, "INPUTS_DIR", tmp_path)
+    cache = PageCache(tmp_path / "cache" / "pages")
+    url = "https://faculty.example.edu.cn/guolin/zh_CN/index.htm"
+    cache.write(url, url, "<html><body><h1>郭霖</h1><p>mail: a@b.edu.cn</p><script>x()</script></body></html>", 200, "static", "utf-8", "h")
+    assert FR.cmd_cached(argparse.Namespace(url=url, name="郭霖", chars=200, around=None, context=50)) == 0
+    out = capsys.readouterr().out
+    assert "status 200" in out and "in visible text: True" in out and "HINT: very little visible text" in out
+    assert FR.cmd_cached(argparse.Namespace(url="https://faculty.example.edu.cn/none", name=None, chars=10, around=None, context=50)) == 1
+    assert FR.cmd_cached(argparse.Namespace(url=url, name=None, chars=10, around=["<h1>", "absent text"], context=20)) == 0
+    out2 = capsys.readouterr().out
+    assert "raw HTML around '<h1>'" in out2 and "(not found)" in out2 and "<body><h1>郭霖</h1>" in out2

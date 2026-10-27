@@ -170,6 +170,7 @@ def test_university_without_a_reviewed_config_is_reported_not_guessed(monkeypatc
     calls = []
     rec, _ = run_one(monkeypatch, "Unconfigured University", FakeConn(("ok", None, "https://x.edu.cn/list"), 0), args(), calls)
     assert rec["status"] == "needs_site_config" and [c[0] for c in calls] == ["fetch"] and "site-learn" in rec["note"]
+    assert calls[0][1][-1] == "--no-profiles"                                               # list only: profile pages wait for a reviewed config
     calls.clear()
     rec, _ = run_one(monkeypatch, "Unconfigured University", FakeConn(("ok", None, "https://x.edu.cn/list"), 0), args(learn=True), calls)
     assert calls[-1][0] == "extract" and calls[-1][1][:5] == ["site-learn", "--university", "Unconfigured University", "--list-url", "https://x.edu.cn/list"]
@@ -188,3 +189,13 @@ def test_a_failing_stage_is_recorded_not_raised(monkeypatch):
 def test_call_stage_shows_and_keeps_the_output(capsys):
     code, secs, tail = B.call_stage(lambda argv: (print("line1"), print("line2"), 0)[-1], [])
     assert code == 0 and secs >= 0 and tail == "line1 | line2" and "line1" in capsys.readouterr().out
+
+
+def test_programs_stage_runs_between_extract_and_match_only_when_asked(monkeypatch):
+    calls = []
+    rec, _ = run_one(monkeypatch, "Tsinghua University", FakeConn(("ok", None, "u"), 0), args(programs=True), calls)
+    assert [c[0] for c in calls] == ["fetch", "extract", "extract", "match"] and calls[2][1] == ["programs", "--only", "Tsinghua University"]
+    assert rec["status"] == "done" and "programs" in rec["stages"]
+    calls.clear()
+    run_one(monkeypatch, "Tsinghua University", FakeConn(("ok", None, "u"), 0), args(), calls)
+    assert [c[0] for c in calls] == ["fetch", "extract", "match"]
