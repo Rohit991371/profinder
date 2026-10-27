@@ -1,6 +1,6 @@
 """`python -m profinder_pipeline batch ...` (task 6.3): run the existing stages for a rotating batch of universities.
 
-  batch run [--n 5] [--only NAME ...] [--stages fetch,extract,match] [--budget 200] [--rounds 3] [--llm --llm-limit 40]
+  batch run [--n 5] [--only NAME ...] [--stages fetch,extract,match] [--budget 200] [--rounds 3] [--llm --llm-limit 40] [--programs]
             [--lock-policy strict|import-ok] [--retry-after-days 7] [--time-limit-min N] [--learn] [--dry-run]
   batch status          the state table
   batch report          rewrite output/batch/batch_report.{csv,md} from the state file
@@ -127,8 +127,11 @@ def run_university(conn, name: str, args, rec: dict, save: Callable[[dict], None
     stages = set(args.stages.split(","))
     problem, pending, list_url = list_state(conn, name)
     if "fetch" in stages:
-        for rnd in range(1, args.rounds + 1):
-            code, secs, tail = call_stage(fns["fetch"], ["run", "--only", name, "--budget", str(args.budget)])
+        # without a reviewed site config nothing can be extracted yet: read only the list (a few seconds), not all profile pages (hours);
+        # the full fetch happens in the next batch run, after the config exists
+        list_only = not has_config
+        for rnd in range(1, (1 if list_only else args.rounds) + 1):
+            code, secs, tail = call_stage(fns["fetch"], ["run", "--only", name, "--budget", str(args.budget)] + (["--no-profiles"] if list_only else []))
             old = (rec.get("stages") or {}).get("fetch") or {}
             rec.setdefault("stages", {})["fetch"] = {"seconds": float(old.get("seconds") or 0) + secs if rnd > 1 else secs, "code": code, "rounds": rnd, "tail": tail}
             problem, pending, list_url = list_state(conn, name)
@@ -154,6 +157,11 @@ def run_university(conn, name: str, args, rec: dict, save: Callable[[dict], None
         code, secs, tail = call_stage(fns["extract"], argv)
         rec.setdefault("stages", {})["extract"] = {"seconds": secs, "code": code, "tail": tail}
         extract_ok = code == 0
+        save(rec)
+    if getattr(args, "programs", False) and "extract" in stages and extract_ok is not False:
+        # programmes + scholarships from the admissions/scholarship targets (Groq; pages come from the cache the fetch/discovery stages filled)
+        code, secs, tail = call_stage(fns["extract"], ["programs", "--only", name])
+        rec.setdefault("stages", {})["programs"] = {"seconds": secs, "code": code, "tail": tail}
         save(rec)
     if "match" in stages and extract_ok is not False:
         code, secs, tail = call_stage(fns["match"], ["run", "--only", name, "--lock-policy", args.lock_policy])
@@ -269,6 +277,7 @@ def main(argv: Optional[list] = None) -> int:
     r.add_argument("--lock-policy", choices=("strict", "import-ok"), default="strict")
     r.add_argument("--retry-after-days", type=float, default=7.0)
     r.add_argument("--time-limit-min", type=float, help="do not start a new university after N minutes")
+    r.add_argument("--programs", action="store_true", help="also run `extract programs` (Groq) on the university's admissions/scholarship targets before matching")
     r.add_argument("--learn", action="store_true", help="for a university without a site config, run site-learn (heuristic) and stop there")
     r.add_argument("--learn-llm", action="store_true", help="with --learn: also use one Groq call")
     r.add_argument("--dry-run", action="store_true", help="only print which universities would run")

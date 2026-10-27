@@ -256,6 +256,40 @@ def cmd_inspect(args) -> int:
     return 0
 
 
+def cmd_cached(args) -> int:
+    """What did the pipeline actually save for this URL? (no network). Answers: is the page real content or a JavaScript shell, is the name /
+    the email in the saved text, which selector text is there. Use it before blaming a site config."""
+    from ..extract.css import visible_text
+    from ..paths import INPUTS_DIR
+    from .cache import PageCache
+    cache = PageCache(INPUTS_DIR / "cache" / "pages")
+    from ..utils.urls import canonical_url
+    page = None
+    for u in (args.url, canonical_url(args.url)):
+        page = cache.read(u, allow_stale=True)
+        if page:
+            break
+    if page is None:
+        print("not in the page cache (run fetch for this university first)")
+        return 1
+    text = visible_text(page.html)
+    print(f"status {page.status} | mode {page.render_mode} | final url {page.final_url} | html {len(page.html)} chars | visible text {len(text)} chars | fetched {page.fetched_at}")
+    print(f"'@' in html: {page.html.count('@')} | '@' in visible text: {text.count('@')} | script tags: {page.html.lower().count('<script')}")
+    if args.name:
+        print(f"name {args.name!r} in visible text: {args.name in text}")
+    if len(text) < 300:
+        print("HINT: very little visible text: probably a JavaScript shell or an error page (try `fetch probe URL --render`)")
+    for needle in (args.around or []):
+        i = page.html.find(needle)
+        print(f"--- raw HTML around {needle!r} " + ("(not found)" if i < 0 else f"(first of {page.html.count(needle)})") + " ---")
+        if i >= 0:
+            print(page.html[max(0, i - args.context): i + len(needle) + args.context])
+    if not args.around:
+        print("--- visible text (start) ---")
+        print(text[: args.chars])
+    return 0
+
+
 def cmd_doctor(args) -> int:
     ok, msg = BrowserRenderer.installed()
     print("playwright:", msg)
@@ -306,6 +340,12 @@ def main(argv) -> int:
     ins.add_argument("--html", required=True)
     ins.add_argument("--url", help="the page's real URL (for relative links)")
     ins.add_argument("--allow-domain", action="append")
+    ca = sub.add_parser("cached", help="show what is saved in the page cache for one URL (no network)")
+    ca.add_argument("url")
+    ca.add_argument("--name", help="a name that must occur in the visible text")
+    ca.add_argument("--chars", type=int, default=1500)
+    ca.add_argument("--around", action="append", help="print the RAW HTML around this text (repeatable): what a CSS selector must match")
+    ca.add_argument("--context", type=int, default=500, help="characters of HTML before and after --around")
     sub.add_parser("report", help="rebuild the report files from results.json")
     d = sub.add_parser("doctor", help="check the fetch environment")
     d.add_argument("--launch", action="store_true", help="also start Chromium once")
@@ -316,6 +356,8 @@ def main(argv) -> int:
         return cmd_probe(args)
     if args.cmd == "inspect":
         return cmd_inspect(args)
+    if args.cmd == "cached":
+        return cmd_cached(args)
     if args.cmd == "report":
         write_reports(_load_results())
         print("written:", OUT_DIR)

@@ -1,0 +1,57 @@
+# PROPOSED by `extract site-learn`. NOT used until a human has reviewed it:
+#  1. open the list page and compare the sample below with what you see; fix selectors that are wrong
+#  2. set school_en / school_zh (page title or site name); check personal_url_patterns (person pages only)
+#  3. add the university to config/universities.yml and config/domains.yml if it is not there
+#  4. delete the `needs_review` and `proposal_stats` lines and move this file to config/sites/<name>.yml
+needs_review: false
+proposed_by: heuristic
+proposal_stats:
+  people: 113
+  raw_items: 172
+  names_ok: 1.0
+  with_link: 1.0
+  with_position: 0.0
+  with_email: 0.0
+  verdict: plausible
+  note: 'no position or email on the list page: they must come from the profile pages (set profile.required: true and add
+    profile fields)'
+university: Central South University
+list_url: https://cse.csu.edu.cn/szdw/jsml.htm
+school_en: null
+school_zh: null
+render: static
+personal_url_patterns:
+- '^https?://faculty\.csu\.edu\.cn/[^/?#]+/zh_CN/index\.htm$'
+# - https://faculty\.csu\.edu\.cn/anying/zh_CN/index\.htm$
+# - https://faculty\.csu\.edu\.cn/chenyuedan/zh_CN/index\.htm$
+# - https://faculty\.csu\.edu\.cn/chenxianlai/zh_CN/index\.htm$
+list:
+  item: div.teachers-name a
+  min_items: 79
+  fields:
+    name:
+      css: :scope
+    profile_href:
+      css: :scope
+      attr: href
+    emails:
+      emails: true
+
+school_en: School of Computer Science and Engineering   
+school_zh: 计算机学院
+profile:
+  required: true
+  fields:
+    name:     {css: ".namebx .nm h2"}
+    position: {css: ".jbqk p, .bs-1 p"}
+    emails:   {emails: true}
+  llm_interests_css: ".siglecrifbx"
+# profile:
+#   required: true
+#   department_is_school: true      # 所在单位 is the school (计算机学院)
+#   fields:
+#     name:       {css: ".namebx .nm h2"}
+#     position:   {css: ".namebx .nm span"}
+#     department: {css: ".bs-1", label: '所在单位[：:]\s*(\S+)'}
+#     emails:     {emails: true}
+#   llm_interests_css: ".siglecrifbx"   # only used with --llm: the 个人简介 bio

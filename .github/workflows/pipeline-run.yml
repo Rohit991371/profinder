@@ -1,0 +1,169 @@
+# ProFinder data pipeline: collect, extract, match, build a release bundle. This workflow NEVER writes to the app tables and never loads.
+# Manual (workflow_dispatch) with dry_run=true by default; the weekly schedule runs a small rotating batch.
+# Database: if the secrets PIPELINE_DATABASE_URL and APP_DATABASE_URL exist they are used (APP_DATABASE_URL is only READ here).
+# Without them a throw-away Postgres service is used and filled from prisma/dev.db: good for a trial, but its candidates disappear with the job,
+# so nothing from such a run can be reviewed or approved. Real operation = persistent PIPELINE_DATABASE_URL (see pipeline/OWNER-GUIDE.md).
+name: pipeline-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      universities:
+        description: 'University names, separated by ";" (exactly as in pipeline/config/universities.yml). Empty = rotating batch.'
+        required: false
+        default: ''
+        type: string
+      batch_size:
+        description: 'Universities per run when the list above is empty'
+        required: false
+        default: '3'
+        type: string
+      dry_run:
+        description: 'true = only show which universities would run (no fetching)'
+        required: true
+        default: true
+        type: boolean
+      use_groq:
+        description: 'Let Groq propose interests where a page has no interests section (uses the free-tier quota)'
+        required: true
+        default: false
+        type: boolean
+      build_release:
+        description: 'Build a draft release bundle at the end'
+        required: true
+        default: true
+        type: boolean
+  schedule:
+    - cron: '17 3 * * 1'     # Mondays 03:17 UTC: a scheduled run processes the next 3 universities of the rotation (dry_run does not apply to it)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-run
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pipeline
+          POSTGRES_PASSWORD: pipeline
+          POSTGRES_DB: profinder_pipeline
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pipeline -d profinder_pipeline"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      LOCAL_URL: postgresql://pipeline:pipeline@localhost:5432/profinder_pipeline
+      PIPELINE_DATABASE_URL: ${{ secrets.PIPELINE_DATABASE_URL || 'postgresql://pipeline:pipeline@localhost:5432/profinder_pipeline' }}
+      APP_DATABASE_URL: ${{ secrets.APP_DATABASE_URL || 'postgresql://pipeline:pipeline@localhost:5432/profinder_pipeline' }}
+      EPHEMERAL: ${{ secrets.APP_DATABASE_URL == '' && 'true' || 'false' }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+      PROXY_URL: ${{ secrets.PROXY_URL }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+      UNIS: ${{ inputs.universities }}
+      BATCH_SIZE: ${{ inputs.batch_size || '3' }}
+      USE_GROQ: ${{ inputs.use_groq || 'false' }}
+      BUILD_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.build_release || 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      - uses: actions/setup-node@v4
+        if: env.EPHEMERAL == 'true'
+        with:
+          node-version: '20'
+
+      - name: Install
+        working-directory: pipeline
+        run: |
+          pip install -r requirements.txt -r requirements-render.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Restore page cache and batch state
+        uses: actions/cache@v4
+        with:
+          path: |
+            pipeline/inputs/cache
+            pipeline/output/batch
+          key: pipeline-state-${{ github.run_id }}
+          restore-keys: |
+            pipeline-state-
+
+      - name: Doctor and ingest schema
+        working-directory: pipeline
+        run: |
+          python -m profinder_pipeline doctor || echo "doctor reported problems (a missing optional key is fine for a trial); stopping only if a later step fails"
+          python -m profinder_pipeline init-db
+
+      - name: App tables from a snapshot (throw-away database only)
+        if: env.EPHEMERAL == 'true'
+        working-directory: pipeline
+        run: |
+          python -m profinder_pipeline app-schema
+          python -m profinder_pipeline seed-snapshot
+
+      - name: Which universities
+        id: sel
+        working-directory: pipeline
+        run: |
+          ARGS=()
+          IFS=';' read -ra NAMES <<< "$UNIS"
+          for n in "${NAMES[@]}"; do
+            n="$(echo "$n" | xargs)"
+            if [ -n "$n" ]; then ARGS+=(--only "$n"); fi
+          done
+          : > /tmp/only.args
+          if [ "${#ARGS[@]}" -gt 0 ]; then printf '%s\0' "${ARGS[@]}" > /tmp/only.args; fi
+          python -m profinder_pipeline batch run --n "$BATCH_SIZE" "${ARGS[@]}" --dry-run | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Fetch, extract, match (batch)
+        if: env.DRY_RUN != 'true'
+        working-directory: pipeline
+        run: |
+          mapfile -d '' ARGS < /tmp/only.args
+          EXTRA=()
+          if [ "$USE_GROQ" = "true" ]; then EXTRA+=(--llm --llm-limit 40); fi
+          python -m profinder_pipeline batch run --n "$BATCH_SIZE" "${ARGS[@]}" "${EXTRA[@]}" --time-limit-min 300
+
+      - name: Draft release bundle
+        if: env.DRY_RUN != 'true' && env.BUILD_RELEASE == 'true'
+        working-directory: pipeline
+        run: |
+          python -m profinder_pipeline release build | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Batch report in the job summary
+        if: always() && env.DRY_RUN != 'true'
+        working-directory: pipeline
+        run: |
+          python -m profinder_pipeline batch report || true
+          if [ -f output/batch/batch_report.md ]; then cat output/batch/batch_report.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Upload results (no secrets, no raw page cache)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-output
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            pipeline/output/releases
+            pipeline/output/batch
+            pipeline/output/extract/extraction_report.md
+            pipeline/output/match
+            pipeline/output/fetch/coverage.md

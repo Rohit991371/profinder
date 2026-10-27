@@ -108,3 +108,11 @@ def test_menus_are_not_proposed_as_people():
 def test_names_only_lists_get_a_note():
     _d, st = learn(NAV_AND_PEOPLE.replace("<span>Professor</span>", ""), "X", "https://x.edu.cn/l", [])
     assert st["with_position"] == 0 and "profile pages" in st["note"]
+
+def test_url_patterns_cover_a_portal_where_every_person_has_their_own_folder():
+    import re
+    names = ["anying", "chenyuedan", "chenxianlai", "chenzhuang", "chenzailiang", "wangli", "zhaoming", "liuyang"]
+    urls = [f"{'http' if i % 2 else 'https'}://faculty.csu.edu.cn/{n}/zh_CN/index.htm" for i, n in enumerate(names)]    # a list often mixes http and https
+    pats = url_patterns_from_samples(urls)
+    assert pats == [r"https?://faculty\.csu\.edu\.cn/[^/?#]+/zh_CN/index\.htm$"]          # one pattern for everybody, not three exact people
+    assert all(re.search(pats[0], u) for u in urls) and not re.search(pats[0], "https://cse.csu.edu.cn/szdw/jsml.htm")
