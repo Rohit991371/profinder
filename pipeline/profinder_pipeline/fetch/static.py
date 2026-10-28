@@ -111,14 +111,21 @@ class StaticFetcher:
                 self._sleep(self.retry.delay_for(attempt, retry_after))
         return RawResponse(last_status, url, b"", "", kind, self.retry.max_attempts)
 
+    
     def get(self, url: str) -> StaticResult:
         r = self._request(url)
+        # some sites (e.g. NUAA faculty portal) answer 400 to http:// but serve the same page over https://
+        if r.kind != "ok" and r.status == 400 and url.lower().startswith("http://"):
+            r2 = self._request("https://" + url[7:])
+            if r2.kind == "ok":
+                r = r2
         if r.kind != "ok":
             return StaticResult(r.kind, r.status, r.url, attempts=r.attempts)
         if r.content_type and "html" not in r.content_type.lower() and "xml" not in r.content_type.lower():
             return StaticResult("not_html", r.status, r.url, attempts=r.attempts)
         text, enc = decode_html(r.content, r.content_type)
         return StaticResult("ok", r.status, r.url, text, enc, r.attempts)
+
 
     def get_text(self, url: str) -> tuple[Optional[int], str, str]:
         """For robots.txt: (status, body, kind)."""
