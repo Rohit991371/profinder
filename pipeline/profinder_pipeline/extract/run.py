@@ -430,6 +430,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--html", help="saved (rendered) list page instead of the cache")
     p.add_argument("--no-llm", action="store_true", help="heuristic only, no Groq call")
     p.set_defaults(fn=cmd_site_learn)
+    p = sub.add_parser("profile-learn", help="propose the `profile:` selectors (position, school label, email) from cached profile pages, with coverage")
+    p.add_argument("--university", required=True)
+    p.add_argument("--n", type=int, default=12, help="profile pages to look at (default 12)")
+    p.add_argument("--url", action="append", help="use these cached profile URLs instead of the database list (repeatable)")
+    p.add_argument("--write", action="store_true", help="write the proposed profile: block into the university's file in config/sites/_proposed/")
+    from .profile_learn import cmd_profile_learn, cmd_promote
+    p.set_defaults(fn=cmd_profile_learn)
+    pp = sub.add_parser("promote", help="check a reviewed proposal and move it from config/sites/_proposed/ to config/sites/")
+    pp.add_argument("--university", required=True)
+    pp.set_defaults(fn=cmd_promote)
     from . import programs as _programs
     _programs.add_parser(sub)
     p = sub.add_parser("report", help="write output/extract/extraction_report.md")

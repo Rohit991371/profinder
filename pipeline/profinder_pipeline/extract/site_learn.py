@@ -118,6 +118,9 @@ def skeleton_for_llm(groups: list[Group]) -> str:
     return "\n\n".join(parts)
 
 
+_NOT_NAMES = {"全部", "更多", "首页", "教师", "师资", "师资队伍", "教师队伍", "博士生导师", "硕士生导师", "在职教师", "退休教师", "行政人员", "其他"}
+
+
 def _name_ok(text: Optional[str]) -> bool:
     """A person's name: 2-6 Chinese characters, or 2-4 capitalised Latin words none of which is a menu/section word."""
     if not text:
@@ -125,6 +128,8 @@ def _name_ok(text: Optional[str]) -> bool:
     zh, _note = clean_name(text)
     if not zh:
         return False
+    if zh in _NOT_NAMES or re.fullmatch(r"(?:副|助理|特聘|客座|兼职|名誉|青年)?(?:教授|研究员|讲师|导师|工程师)", zh):
+        return False                           # rank/category tabs ("教授", "副教授") are not people
     if re.fullmatch(r"[\u3400-\u9fff·]{2,6}", zh):
         return True
     if re.fullmatch(r"[A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+){1,3}", zh):
@@ -156,6 +161,36 @@ def heuristic_fields(html: str, item_css: str, item_is_anchor: bool = False) -> 
             break
     fields["emails"] = {"emails": True}
     return fields
+
+
+_SCHOOL = re.compile(r"(学院|学部|研究院|研究所|系|中心|School|College|Department|Faculty|Institute)", re.I)
+
+
+def guess_school(html: str) -> Optional[str]:
+    """The school whose faculty list this is, from the page <title> / first heading / breadcrumb: the segment that names a school.
+    The university prefix is removed ('南京航空航天大学计算机学院' -> '计算机学院'). None when nothing looks like a school name."""
+    soup = soup_of(html)
+    cands: list[str] = []
+    ttl = soup.title.string if soup.title and soup.title.string else ""
+    m_en = re.search(r"(?:School|College|Department|Faculty|Institute) of [A-Za-z][A-Za-z &,]{2,60}", ttl)
+    if m_en:
+        return re.sub(r"[\s,&-]+$", "", m_en.group(0))
+    if ttl:
+        cands += re.split(r"[-_|—–:：>»/ ]+", soup.title.string)
+    for tag in soup.find_all(["h1", "h2"], limit=3):
+        cands.append(tag.get_text(" ", strip=True))
+    for seg in cands:
+        seg = re.sub(r"\s+", "", seg or "")
+        m = re.search(r"(?:大学|学院)?([^\s,，;；]{2,16}?(?:学院|学部|研究院|研究所|系|中心))$", seg) if re.search(r"[一-鿿]", seg) else None
+        if m and not seg.endswith(("大学", "大学官网")):
+            name = m.group(1)
+            if "大学" in name:
+                name = name.split("大学")[-1]
+            if 2 <= len(name) <= 16 and _SCHOOL.search(name):
+                return name
+        if re.fullmatch(r"(School|College|Department|Faculty|Institute) of [A-Za-z &,]{3,60}", seg.strip()):
+            return seg.strip()
+    return None
 
 
 def build_site_dict(university: str, list_url: str, item_css: str, fields: dict[str, Any], patterns: list[str], proposed_by: str,
@@ -270,6 +305,9 @@ def learn(html: str, university: str, list_url: str, domains: list[str], client:
     hrefs = [p.profile_href for p in parse_list(html, cfg).people if p.profile_href]
     patterns = url_patterns_from_samples(hrefs)
     out = build_site_dict(university, list_url, item_css, fields, patterns, by, {k: v for k, v in base.items() if k != "sample"})
+    guess = guess_school(html)                         # a guess from the page title: the reviewer confirms it
+    if guess:
+        out["school_en" if guess.isascii() else "school_zh"] = guess
     return out, base
 
 

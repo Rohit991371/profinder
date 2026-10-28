@@ -1,0 +1,42 @@
+university: Nanjing University of Aeronautics and Astronautics
+list_url: https://cs.nuaa.edu.cn/20613/list.htm
+school_en: Nanjing University of Aeronautics and Astronautics
+school_zh: 南京航空航天大学
+render: static
+personal_url_patterns:
+    # 1. Matches standard profiles (e.g., /zh_CN/index.htm)
+    - '^https?://faculty\.nuaa\.edu\.cn/[^/]+/zh_CN/index\.htm$'
+
+    # 2. Matches English language profiles (e.g., /en/index.htm for 韩星烁)
+    - '^https?://faculty\.nuaa\.edu\.cn/[^/]+/en/index\.htm$'
+
+    # 3. Matches short profile roots (e.g., /yang for 章阳)
+    - '^https?://faculty\.nuaa\.edu\.cn/[^/]+/?$'
+
+    # 4. Matches deep sub-index structures (e.g., /zh_CN/index/12345/... for 陈星宇 & 卢晓珍)
+    - '^https?://faculty\.nuaa\.edu\.cn/[^/]+/zh_CN/index/.*$'
+
+# - http://faculty\.nuaa\.edu\.cn/wj\d+/zh_CN/index\.htm$
+# - http://faculty\.nuaa\.edu\.cn/wangran/zh_CN/index\.htm$
+# - http://faculty\.nuaa\.edu\.cn/lixin/zh_CN/index\.htm$
+list:
+    item: div.item-con li
+    min_items: 84
+    fields:
+        name:
+            css: a
+        profile_href:
+            css: a
+            attr: href
+        emails:
+            emails: true
+profile:
+    required: true
+    fields:
+        name:
+            css: .prof_name, h1.title, .name
+        position:
+            css: .prof_intro p, .jbqk p, td:contains('职称')
+        emails:
+            css: body
+            emails: true
